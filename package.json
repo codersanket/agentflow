@@ -1,0 +1,31 @@
+{
+  "name": "agentflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open-source AI Agent Platform",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "dev:web": "turbo dev --filter=@agentflow/web",
+    "dev:api": "cd apps/api && poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "db:migrate": "cd apps/api && poetry run alembic upgrade head",
+    "db:makemigrations": "cd apps/api && poetry run alembic revision --autogenerate -m",
+    "db:downgrade": "cd apps/api && poetry run alembic downgrade -1",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:reset": "docker compose -f infra/docker/docker-compose.yml down -v && docker compose -f infra/docker/docker-compose.yml up -d",
+    "format": "turbo format",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

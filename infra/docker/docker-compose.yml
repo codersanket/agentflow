@@ -1,19 +1,17 @@
-version: "3.9"
-
 services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: agentflow-postgres
     environment:
-      POSTGRES_USER: agentflow
-      POSTGRES_PASSWORD: agentflow
-      POSTGRES_DB: agentflow
+      POSTGRES_USER: ${POSTGRES_USER:-agentflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentflow}
+      POSTGRES_DB: ${POSTGRES_DB:-agentflow}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agentflow"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agentflow}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,7 +20,7 @@ services:
     image: redis:7-alpine
     container_name: agentflow-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -35,8 +33,8 @@ services:
     image: axllent/mailpit
     container_name: agentflow-mailpit
     ports:
-      - "8025:8025"   # Web UI
-      - "1025:1025"   # SMTP
+      - "8025:8025"
+      - "1025:1025"
     environment:
       MP_MAX_MESSAGES: 500
 

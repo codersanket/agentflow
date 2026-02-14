@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+import uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from fastapi import APIRouter, FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+
+from core.config import settings
+from core.database import engine
+from core.redis import close_redis
+from routers.auth import router as auth_router
+from routers.org import router as org_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Startup
+    yield
+    # Shutdown
+    await engine.dispose()
+    await close_redis()
+
+
+app = FastAPI(
+    title="AgentFlow API",
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Request ID middleware
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next) -> Response:
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+# Health check
+@app.get("/health")
+async def health_check() -> dict:
+    return {"status": "ok"}
+
+
+# API v1 router
+api_v1_router = APIRouter(prefix="/api/v1")
+api_v1_router.include_router(auth_router)
+api_v1_router.include_router(org_router)
+
+app.include_router(api_v1_router)
