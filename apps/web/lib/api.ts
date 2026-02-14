@@ -172,6 +172,91 @@ export interface UserResponse {
   role: string;
 }
 
+export interface Agent {
+  id: string;
+  name: string;
+  description?: string;
+  status: "draft" | "active" | "paused" | "archived";
+  trigger_type?: string;
+  trigger_config?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentVersion {
+  id: string;
+  agent_id: string;
+  version: number;
+  definition: Record<string, unknown>;
+  change_message?: string;
+  created_by?: string;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface CreateAgentInput {
+  name: string;
+  description?: string;
+  trigger_type?: string;
+  trigger_config?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
+}
+
+export interface PublishInput {
+  change_message?: string;
+  definition: Record<string, unknown>;
+}
+
+export interface Execution {
+  id: string;
+  agent_id: string;
+  agent_version_id?: string;
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  triggered_by: string;
+  trigger_data?: Record<string, unknown>;
+  started_at?: string;
+  completed_at?: string;
+  total_tokens: number;
+  total_cost: number;
+  error_message?: string;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ExecutionStep {
+  id: string;
+  execution_id: string;
+  node_id?: string;
+  step_order: number;
+  status: string;
+  input_data?: Record<string, unknown>;
+  output_data?: Record<string, unknown>;
+  error_message?: string;
+  tokens_used: number;
+  cost: number;
+  duration_ms: number;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface ExecutionLog {
+  id: string;
+  execution_id: string;
+  step_id?: string;
+  level: string;
+  message: string;
+  data?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  cursor?: string;
+  has_more: boolean;
+}
+
 export const api = {
   auth: {
     login: (email: string, password: string) =>
@@ -180,5 +265,33 @@ export const api = {
       post<SignupResponse>("/auth/signup", data),
     me: () => get<UserResponse>("/auth/me"),
     refresh: () => refreshAccessToken(),
+  },
+  agents: {
+    list: (params?: Record<string, string>) =>
+      get<PaginatedResponse<Agent>>("/agents", params),
+    get: (id: string) => get<Agent>(`/agents/${id}`),
+    create: (data: CreateAgentInput) => post<Agent>("/agents", data),
+    update: (id: string, data: Partial<CreateAgentInput>) =>
+      put<Agent>(`/agents/${id}`, data),
+    delete: (id: string) => del<void>(`/agents/${id}`),
+    publish: (id: string, data: PublishInput) =>
+      post<AgentVersion>(`/agents/${id}/publish`, data),
+    versions: (id: string) =>
+      get<AgentVersion[]>(`/agents/${id}/versions`),
+    updateStatus: (id: string, status: string) =>
+      put<Agent>(`/agents/${id}/status`, { status }),
+    execute: (id: string, data?: Record<string, unknown>) =>
+      post<Execution>(`/agents/${id}/execute`, data),
+    test: (id: string, data: Record<string, unknown>) =>
+      post<Execution>(`/agents/${id}/test`, data),
+  },
+  executions: {
+    list: (params?: Record<string, string>) =>
+      get<PaginatedResponse<Execution>>("/executions", params),
+    get: (id: string) => get<Execution>(`/executions/${id}`),
+    steps: (id: string) => get<ExecutionStep[]>(`/executions/${id}/steps`),
+    logs: (id: string) => get<ExecutionLog[]>(`/executions/${id}/logs`),
+    cancel: (id: string) => post<void>(`/executions/${id}/cancel`),
+    approve: (id: string) => post<void>(`/executions/${id}/approve`),
   },
 };
