@@ -11,9 +11,13 @@ from core.config import settings
 from core.database import engine
 from core.redis import close_redis
 from routers.agents import router as agents_router
+from routers.analytics import router as analytics_router
 from routers.auth import router as auth_router
 from routers.executions import agent_execution_router, router as executions_router
+from routers.integrations import router as integrations_router
+from routers.knowledge import router as knowledge_router
 from routers.org import router as org_router
+from routers.templates import router as templates_router
 
 
 @asynccontextmanager
@@ -66,5 +70,9 @@ api_v1_router.include_router(org_router)
 api_v1_router.include_router(agents_router)
 api_v1_router.include_router(executions_router)
 api_v1_router.include_router(agent_execution_router)
+api_v1_router.include_router(templates_router)
+api_v1_router.include_router(analytics_router)
+api_v1_router.include_router(integrations_router)
+api_v1_router.include_router(knowledge_router)
 
 app.include_router(api_v1_router)

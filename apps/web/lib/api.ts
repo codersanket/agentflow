@@ -133,6 +133,43 @@ function del<T>(path: string): Promise<T> {
   return request<T>(path, { method: "DELETE" });
 }
 
+async function uploadFile<T>(path: string, file: File): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: formData,
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    let errorData: ApiErrorResponse;
+    try {
+      errorData = await res.json();
+    } catch {
+      throw new ApiRequestError(
+        `Upload failed with status ${res.status}`,
+        "UPLOAD_ERROR",
+        res.status
+      );
+    }
+    throw new ApiRequestError(
+      errorData.error?.message || "Upload failed",
+      errorData.error?.code || "UPLOAD_ERROR",
+      res.status
+    );
+  }
+
+  return res.json();
+}
+
 export interface LoginResponse {
   access_token: string;
   token_type: string;
@@ -257,6 +294,146 @@ export interface PaginatedResponse<T> {
   has_more: boolean;
 }
 
+export interface Template {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  icon?: string;
+  is_official: boolean;
+  is_public: boolean;
+  author_org_id?: string;
+  install_count: number;
+  rating: number;
+  created_at: string;
+}
+
+export interface TemplateDetail extends Template {
+  definition: Record<string, unknown>;
+}
+
+export interface AnalyticsOverview {
+  total_executions: number;
+  recent_executions: number;
+  success_rate: number;
+  avg_duration_ms: number;
+  active_agents: number;
+  total_cost: number;
+}
+
+export interface UsageDataPoint {
+  date: string;
+  total_runs: number;
+  total_tokens: number;
+  total_cost: number;
+  success_count: number;
+  failure_count: number;
+}
+
+export interface AgentMetrics {
+  agent_id: string;
+  agent_name: string;
+  total_executions: number;
+  success_rate: number;
+  avg_duration_ms: number;
+  total_cost: number;
+  total_tokens: number;
+}
+
+export interface CostBreakdownItem {
+  group_id: string;
+  group_name: string;
+  total_runs: number;
+  total_tokens: number;
+  total_cost: number;
+}
+
+export interface Integration {
+  id: string;
+  org_id: string;
+  provider: string;
+  name?: string;
+  status: string;
+  scopes?: string[];
+  connected_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AvailableIntegration {
+  provider: string;
+  name: string;
+  description: string;
+  actions: {
+    name: string;
+    description: string;
+    parameters: Record<string, string>;
+  }[];
+}
+
+export interface ConnectIntegrationInput {
+  name?: string;
+  credentials: Record<string, string>;
+  scopes?: string[];
+}
+
+export interface KnowledgeBase {
+  id: string;
+  org_id: string;
+  name: string;
+  description?: string;
+  embedding_model: string;
+  chunk_size: number;
+  chunk_overlap: number;
+  status: string;
+  document_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateKnowledgeBaseInput {
+  name: string;
+  description?: string;
+  embedding_model?: string;
+  chunk_size?: number;
+  chunk_overlap?: number;
+}
+
+export interface KBDocument {
+  id: string;
+  knowledge_base_id: string;
+  name: string;
+  source_type: string;
+  source_url?: string;
+  file_type?: string;
+  file_size_bytes?: number;
+  status: string;
+  chunk_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentUploadResponse {
+  id: string;
+  name: string;
+  status: string;
+  message: string;
+}
+
+export interface QueryResult {
+  chunk_id: string;
+  document_id: string;
+  content: string;
+  metadata?: Record<string, unknown>;
+  chunk_index: number;
+  similarity: number;
+}
+
+export interface QueryResponse {
+  query: string;
+  results: QueryResult[];
+}
+
 export const api = {
   auth: {
     login: (email: string, password: string) =>
@@ -293,5 +470,55 @@ export const api = {
     logs: (id: string) => get<ExecutionLog[]>(`/executions/${id}/logs`),
     cancel: (id: string) => post<void>(`/executions/${id}/cancel`),
     approve: (id: string) => post<void>(`/executions/${id}/approve`),
+  },
+  templates: {
+    list: (params?: Record<string, string>) =>
+      get<PaginatedResponse<Template>>("/templates", params),
+    get: (id: string) => get<TemplateDetail>(`/templates/${id}`),
+    install: (id: string, data?: { name?: string }) =>
+      post<Agent>(`/templates/${id}/install`, data),
+    publish: (data: {
+      agent_id: string;
+      name: string;
+      description?: string;
+      category?: string;
+      icon?: string;
+      is_public?: boolean;
+    }) => post<TemplateDetail>("/templates", data),
+  },
+  integrations: {
+    list: () => get<Integration[]>("/integrations"),
+    connect: (provider: string, data: ConnectIntegrationInput) =>
+      post<Integration>(`/integrations/${provider}/connect`, data),
+    disconnect: (id: string) => del<void>(`/integrations/${id}`),
+    available: () => get<AvailableIntegration[]>("/integrations/available"),
+  },
+  analytics: {
+    overview: () => get<AnalyticsOverview>("/analytics/overview"),
+    usage: (params?: Record<string, string>) =>
+      get<UsageDataPoint[]>("/analytics/usage", params),
+    agentMetrics: (agentId: string) =>
+      get<AgentMetrics>(`/analytics/agents/${agentId}`),
+    costs: (params?: Record<string, string>) =>
+      get<CostBreakdownItem[]>("/analytics/costs", params),
+  },
+  knowledgeBases: {
+    list: (params?: Record<string, string>) =>
+      get<PaginatedResponse<KnowledgeBase>>("/knowledge-bases", params),
+    get: (id: string) => get<KnowledgeBase>(`/knowledge-bases/${id}`),
+    create: (data: CreateKnowledgeBaseInput) =>
+      post<KnowledgeBase>("/knowledge-bases", data),
+    delete: (id: string) => del<void>(`/knowledge-bases/${id}`),
+    documents: (id: string) =>
+      get<KBDocument[]>(`/knowledge-bases/${id}/documents`),
+    uploadDocument: (id: string, file: File) =>
+      uploadFile<DocumentUploadResponse>(`/knowledge-bases/${id}/documents`, file),
+    deleteDocument: (kbId: string, docId: string) =>
+      del<void>(`/knowledge-bases/${kbId}/documents/${docId}`),
+    query: (id: string, query: string, topK?: number) =>
+      post<QueryResponse>(`/knowledge-bases/${id}/query`, {
+        query,
+        top_k: topK ?? 5,
+      }),
   },
 };

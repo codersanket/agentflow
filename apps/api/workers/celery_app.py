@@ -21,5 +21,6 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     task_routes={
         "workers.agent_worker.execute_agent": {"queue": "agents"},
+        "workers.ingestion_worker.ingest_document": {"queue": "ingestion"},
     },
 )
