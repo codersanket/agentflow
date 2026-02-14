@@ -1,0 +1,43 @@
+{
+  "recommendations": [
+    // AI Coding Assistants
+    "github.copilot",
+    "github.copilot-chat",
+    "supermaven.supermaven",
+
+    // Python
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "ms-python.mypy-type-checker",
+
+    // TypeScript / JavaScript
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+
+    // API Development
+    "humao.rest-client",
+    "42Crunch.vscode-openapi",
+
+    // Database
+    "ckolkman.vscode-postgres",
+
+    // Docker & Infrastructure
+    "ms-azuretools.vscode-docker",
+    "hashicorp.terraform",
+
+    // Git
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+
+    // General Productivity
+    "usernamehw.errorlens",
+    "gruntfuggly.todo-tree",
+    "aaron-bond.better-comments",
+    "mikestead.dotenv",
+
+    // Testing
+    "ms-python.pytest-intellisense"
+  ]
+}
