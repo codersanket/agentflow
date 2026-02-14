@@ -76,3 +76,6 @@ class DocumentChunk(BaseModel):
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
     embedding = mapped_column(Vector(1536), nullable=True)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Relationships
+    document: Mapped[Document] = relationship(back_populates="chunks")
