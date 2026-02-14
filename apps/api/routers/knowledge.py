@@ -53,11 +53,7 @@ async def get_knowledge_base(
     return await knowledge_service.get_knowledge_base(db, org_id, kb_id)
 
 
-@router.delete(
-    "/{kb_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-)
+@router.delete("/{kb_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_knowledge_base(
     kb_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -65,6 +61,7 @@ async def delete_knowledge_base(
     _user: User = Depends(get_current_user),
 ):
     await knowledge_service.delete_knowledge_base(db, org_id, kb_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
@@ -92,11 +89,7 @@ async def list_documents(
     return await knowledge_service.list_documents(db, org_id, kb_id)
 
 
-@router.delete(
-    "/{kb_id}/documents/{doc_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-)
+@router.delete("/{kb_id}/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
     kb_id: UUID,
     doc_id: UUID,
@@ -105,6 +98,7 @@ async def delete_document(
     _user: User = Depends(get_current_user),
 ):
     await knowledge_service.delete_document(db, org_id, kb_id, doc_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{kb_id}/query", response_model=QueryResponse)

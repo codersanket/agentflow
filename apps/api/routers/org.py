@@ -82,11 +82,7 @@ async def update_member_role(
     )
 
 
-@router.delete(
-    "/members/{membership_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-)
+@router.delete("/members/{membership_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_member(
     membership_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -94,6 +90,7 @@ async def remove_member(
     _role: str = Depends(require_role("admin")),
 ):
     await org_service.remove_member(db, org_id, membership_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/api-keys", response_model=list[ApiKeyResponse])
@@ -126,11 +123,7 @@ async def create_api_key(
     )
 
 
-@router.delete(
-    "/api-keys/{key_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-)
+@router.delete("/api-keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_api_key(
     key_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -138,3 +131,4 @@ async def revoke_api_key(
     _role: str = Depends(require_role("admin")),
 ):
     await api_key_service.revoke_api_key(db, org_id, key_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

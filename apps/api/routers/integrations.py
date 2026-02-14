@@ -44,18 +44,15 @@ async def connect_integration(
     )
 
 
-@router.delete(
-    "/{integration_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-)
+@router.delete("/{integration_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def disconnect_integration(
     integration_id: UUID,
     db: AsyncSession = Depends(get_db),
     org_id: UUID = Depends(get_current_org),
     _user: User = Depends(get_current_user),
-) -> None:
+):
     await integration_service.disconnect_integration(db, org_id, integration_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/available", response_model=list[AvailableIntegrationResponse])
