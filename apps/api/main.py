@@ -10,7 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 from core.database import engine
 from core.redis import close_redis
+from routers.agents import router as agents_router
 from routers.auth import router as auth_router
+from routers.executions import agent_execution_router, router as executions_router
 from routers.org import router as org_router
 
 
@@ -61,5 +63,8 @@ async def health_check() -> dict:
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(org_router)
+api_v1_router.include_router(agents_router)
+api_v1_router.include_router(executions_router)
+api_v1_router.include_router(agent_execution_router)
 
 app.include_router(api_v1_router)

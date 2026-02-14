@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     API_CORS_ORIGINS: str = "http://localhost:3000"
 
+    # LLM Providers (optional — set via env vars)
+    OPENAI_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: str | None = None
+    GOOGLE_API_KEY: str | None = None
+    OLLAMA_URL: str | None = None
+
     # App
     APP_ENV: str = "development"
 
