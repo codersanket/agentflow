@@ -1,7 +1,11 @@
 # AgentFlow — Claude Code Instructions
 
 ## Project Overview
-AgentFlow is a production-grade AI Agent Platform for enterprises. Users build, deploy, and manage AI agents that automate workflows across their tool stack (Slack, Gmail, Jira, Salesforce, etc.) via a visual drag-and-drop builder or SDK/API.
+AgentFlow is an **open-source** AI Agent Platform that enables teams to build, deploy, and manage AI agents that automate workflows across their tool stack (Slack, Gmail, Jira, Salesforce, etc.) via a visual drag-and-drop builder or SDK/API.
+
+**License:** AGPLv3 (open-core model — cloud + enterprise features added later based on community traction)
+
+**Strategy:** Ship open source first → gauge community reaction → add paid cloud hosting + enterprise tier
 
 ## Monorepo Structure
 ```
@@ -28,20 +32,22 @@ agentflow/
 - **Queue/Cache:** Redis 7, Celery
 - **Agent Engine:** LangGraph + LangChain (selective)
 - **Auth:** JWT (access + refresh tokens), API keys (SHA-256 hashed)
-- **Billing:** Stripe (subscriptions + metered usage)
-- **Infra:** Docker Compose (local), deploy target TBD (start simple)
+- **Infra:** Docker Compose (self-hosted), deploy target TBD for future cloud tier
 
-## Build Phases (Priority Order)
+## Build Phases (Open Source First)
 1. **Foundation** — Monorepo, auth, database, RBAC, dashboard shell
 2. **Agent Engine** — Execution engine, AI providers, Celery workers, WebSocket streaming
 3. **Visual Builder** — React Flow canvas, node config, testing, version management
-4. **Billing** — Stripe integration, plan limits, usage tracking (PULLED FORWARD)
-5. **Integrations** — Slack, webhook, custom HTTP (start with 2-3, add on demand)
-6. **Templates** — 5 pre-built agent templates
-7. **Analytics** — Usage dashboard, cost breakdown, per-agent metrics
-8. **Knowledge Base (RAG)** — Document ingestion, chunking, pgvector search, RAG node
-9. **Enterprise** — SSO/SAML, audit logs, rate limiting, data retention
-10. **Ecosystem** — Python SDK, TypeScript SDK, CLI, marketplace
+4. **Integrations** — Slack, webhook, custom HTTP (start with 2-3, community adds more)
+5. **Templates** — 5 pre-built agent templates for quick start
+6. **Analytics** — Usage dashboard, cost breakdown, per-agent metrics
+7. **Knowledge Base (RAG)** — Document ingestion, chunking, pgvector search, RAG node
+8. **Open Source Launch** — LICENSE (AGPLv3), README, CONTRIBUTING.md, Docker self-host guide, GitHub repo setup
+
+### Future (Post-Community Validation)
+9. **Cloud Hosting** — Managed cloud tier with Stripe billing
+10. **Enterprise** — SSO/SAML, audit logs, rate limiting (paid tier)
+11. **Ecosystem** — Python SDK, TypeScript SDK, CLI, marketplace
 
 ## Code Conventions
 
@@ -95,13 +101,31 @@ agentflow/
 - Errors: `{"error": {"code": "ERROR_CODE", "message": "Human-readable message"}}`
 - All list endpoints support filtering and sorting
 
+## Task Management (Beads)
+This project uses **Beads** (`bd`) for issue tracking. All tasks live in `.beads/`.
+
+```bash
+bd ready              # Find available work (unblocked tasks)
+bd show <id>          # View issue details
+bd update <id> --status in_progress  # Claim work
+bd close <id>         # Complete work
+bd sync               # Sync with git
+bd list               # List all issues
+```
+
+### Task Structure
+- Epics: `agentflow-xxx` (one per phase)
+- Sub-tasks: `agentflow-xxx.N` (work items within a phase)
+- Dependencies enforce build order — `bd ready` shows what's unblocked
+
 ## Multi-Agent Workflow
 This project uses Claude Code multi-agent mode. When working:
+- Run `bd ready` to find available work
+- Claim a task with `bd update <id> --status in_progress`
 - Read the relevant CLAUDE.md in subdirectories for context-specific instructions
-- Check task board before starting work
-- Update task status as you progress
 - Reference docs/PRD.md, docs/TECH_PRD.md, and docs/PLAN.md for requirements
-- Each phase's acceptance criteria defines "done"
+- Close tasks with `bd close <id>` when acceptance criteria are met
+- Run `bd sync` before ending a session
 
 ## Key Commands
 ```bash
