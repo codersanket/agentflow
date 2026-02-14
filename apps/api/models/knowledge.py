@@ -21,9 +21,7 @@ class KnowledgeBase(BaseModel):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    embedding_model: Mapped[str] = mapped_column(
-        String(100), default="text-embedding-3-small"
-    )
+    embedding_model: Mapped[str] = mapped_column(String(100), default="text-embedding-3-small")
     chunk_size: Mapped[int] = mapped_column(Integer, default=1000)
     chunk_overlap: Mapped[int] = mapped_column(Integer, default=200)
     status: Mapped[str] = mapped_column(String(50), default="active", index=True)

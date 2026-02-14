@@ -50,6 +50,5 @@ class IntegrationTool(ABC):
         if self.get_action(action_name) is None:
             valid = [a.name for a in self.actions]
             raise ValueError(
-                f"Unknown action '{action_name}' for tool '{self.name}'. "
-                f"Available: {valid}"
+                f"Unknown action '{action_name}' for tool '{self.name}'. Available: {valid}"
             )

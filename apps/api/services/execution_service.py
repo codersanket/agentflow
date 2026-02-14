@@ -7,7 +7,6 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from models.agent import Agent, AgentVersion
 from models.execution import Execution, ExecutionLog, ExecutionStep
@@ -251,11 +250,13 @@ async def cancel_execution(
 
         await redis.publish(
             f"execution:{execution_id}",
-            json.dumps({
-                "type": "execution.cancelled",
-                "execution_id": str(execution_id),
-                "timestamp": datetime.now(UTC).isoformat(),
-            }),
+            json.dumps(
+                {
+                    "type": "execution.cancelled",
+                    "execution_id": str(execution_id),
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            ),
         )
     except Exception:
         pass
@@ -301,12 +302,14 @@ async def approve_step(
 
         await redis.publish(
             f"execution:{execution_id}",
-            json.dumps({
-                "type": "step.approved",
-                "execution_id": str(execution_id),
-                "step_id": str(step.id) if step else None,
-                "timestamp": datetime.now(UTC).isoformat(),
-            }),
+            json.dumps(
+                {
+                    "type": "step.approved",
+                    "execution_id": str(execution_id),
+                    "step_id": str(step.id) if step else None,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            ),
         )
     except Exception:
         pass
@@ -324,9 +327,7 @@ async def _get_active_agent_or_400(
     org_id: UUID,
     agent_id: UUID,
 ) -> Agent:
-    result = await db.execute(
-        select(Agent).where(Agent.id == agent_id, Agent.org_id == org_id)
-    )
+    result = await db.execute(select(Agent).where(Agent.id == agent_id, Agent.org_id == org_id))
     agent = result.scalar_one_or_none()
 
     if agent is None:

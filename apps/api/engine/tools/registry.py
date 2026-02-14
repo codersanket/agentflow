@@ -35,9 +35,7 @@ class ToolRegistry:
         try:
             return self._tools[name]
         except KeyError:
-            raise KeyError(
-                f"Tool '{name}' not found. Registered: {list(self._tools)}"
-            )
+            raise KeyError(f"Tool '{name}' not found. Registered: {list(self._tools)}")
 
     def list_tools(self) -> list[IntegrationTool]:
         """Return all registered tools."""

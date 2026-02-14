@@ -317,9 +317,7 @@ async def _get_agent_or_404(
     org_id: UUID,
     agent_id: UUID,
 ) -> Agent:
-    result = await db.execute(
-        select(Agent).where(Agent.id == agent_id, Agent.org_id == org_id)
-    )
+    result = await db.execute(select(Agent).where(Agent.id == agent_id, Agent.org_id == org_id))
     agent = result.scalar_one_or_none()
 
     if agent is None:

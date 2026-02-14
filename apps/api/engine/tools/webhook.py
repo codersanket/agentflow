@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 def _render_template(template: str, variables: dict) -> str:
     """Replace ``{{key}}`` placeholders in *template* with values from *variables*."""
+
     def _replacer(match: re.Match) -> str:
         key = match.group(1).strip()
         return str(variables.get(key, match.group(0)))

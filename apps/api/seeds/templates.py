@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Seed script for official agent templates.
 
 Run standalone:
@@ -7,6 +5,8 @@ Run standalone:
 
 Or import and call ``seed_templates(session)`` from an async context.
 """
+
+from __future__ import annotations
 
 import asyncio
 import uuid
@@ -23,7 +23,11 @@ from models.template import AgentTemplate
 SEED_TEMPLATES: list[dict] = [
     {
         "name": "Support Ticket Classifier",
-        "description": "Automatically classifies incoming support tickets by priority using AI and notifies the team on Slack when a high-priority ticket arrives.",
+        "description": (
+            "Automatically classifies incoming support tickets by"
+            " priority using AI and notifies the team on Slack"
+            " when a high-priority ticket arrives."
+        ),
         "category": "support",
         "icon": "ticket",
         "definition": {
@@ -47,7 +51,14 @@ SEED_TEMPLATES: list[dict] = [
                     "label": "Classify Priority",
                     "config": {
                         "model": "gpt-4o",
-                        "prompt": "Classify the following support ticket into one of these priorities: critical, high, medium, low.\n\nSubject: {{trigger.data.subject}}\nBody: {{trigger.data.body}}\n\nRespond with ONLY the priority level.",
+                        "prompt": (
+                            "Classify the following support ticket"
+                            " into one of these priorities:"
+                            " critical, high, medium, low.\n\n"
+                            "Subject: {{trigger.data.subject}}\n"
+                            "Body: {{trigger.data.body}}\n\n"
+                            "Respond with ONLY the priority level."
+                        ),
                         "temperature": 0.1,
                     },
                     "position_x": 250,
@@ -78,7 +89,12 @@ SEED_TEMPLATES: list[dict] = [
                         "action": "send_message",
                         "params": {
                             "channel": "#support-urgent",
-                            "text": "High-priority ticket: {{trigger.data.subject}} — Priority: {{ai-1.output.text}}",
+                            "text": (
+                                "High-priority ticket:"
+                                " {{trigger.data.subject}}"
+                                " — Priority:"
+                                " {{ai-1.output.text}}"
+                            ),
                         },
                     },
                     "position_x": 250,
@@ -99,7 +115,10 @@ SEED_TEMPLATES: list[dict] = [
     },
     {
         "name": "Meeting Notes Summarizer",
-        "description": "Receives meeting notes via webhook, generates an AI-powered summary, and posts it to a Slack channel.",
+        "description": (
+            "Receives meeting notes via webhook, generates an"
+            " AI-powered summary, and posts it to a Slack channel."
+        ),
         "category": "engineering",
         "icon": "file-text",
         "definition": {
@@ -123,7 +142,17 @@ SEED_TEMPLATES: list[dict] = [
                     "label": "Summarize Notes",
                     "config": {
                         "model": "gpt-4o",
-                        "prompt": "Summarize the following meeting notes into key points, action items, and decisions.\n\nMeeting: {{trigger.data.title}}\nAttendees: {{trigger.data.attendees}}\nNotes:\n{{trigger.data.transcript}}\n\nFormat with bullet points under sections: Key Points, Action Items, Decisions.",
+                        "prompt": (
+                            "Summarize the following meeting notes"
+                            " into key points, action items, and"
+                            " decisions.\n\n"
+                            "Meeting: {{trigger.data.title}}\n"
+                            "Attendees: {{trigger.data.attendees}}\n"
+                            "Notes:\n{{trigger.data.transcript}}\n\n"
+                            "Format with bullet points under"
+                            " sections: Key Points, Action Items,"
+                            " Decisions."
+                        ),
                         "temperature": 0.3,
                     },
                     "position_x": 250,
@@ -139,7 +168,9 @@ SEED_TEMPLATES: list[dict] = [
                         "action": "send_message",
                         "params": {
                             "channel": "#meeting-notes",
-                            "text": "Meeting Summary: {{trigger.data.title}}\n\n{{ai-1.output.text}}",
+                            "text": (
+                                "Meeting Summary: {{trigger.data.title}}\n\n{{ai-1.output.text}}"
+                            ),
                         },
                     },
                     "position_x": 250,
@@ -154,7 +185,11 @@ SEED_TEMPLATES: list[dict] = [
     },
     {
         "name": "Lead Enrichment",
-        "description": "When a new lead arrives via webhook, uses AI to research the company and updates the CRM record via HTTP.",
+        "description": (
+            "When a new lead arrives via webhook, uses AI to"
+            " research the company and updates the CRM record"
+            " via HTTP."
+        ),
         "category": "sales",
         "icon": "user-search",
         "definition": {
@@ -178,7 +213,17 @@ SEED_TEMPLATES: list[dict] = [
                     "label": "Research Company",
                     "config": {
                         "model": "gpt-4o",
-                        "prompt": "Research the following company and provide a brief summary including: industry, size, key products/services, recent news, and potential fit.\n\nCompany: {{trigger.data.company}}\nWebsite: {{trigger.data.website}}\n\nReturn as JSON with keys: industry, size, products, recent_news, fit_score (1-10).",
+                        "prompt": (
+                            "Research the following company and"
+                            " provide a brief summary including:"
+                            " industry, size, key products/services,"
+                            " recent news, and potential fit.\n\n"
+                            "Company: {{trigger.data.company}}\n"
+                            "Website: {{trigger.data.website}}\n\n"
+                            "Return as JSON with keys: industry,"
+                            " size, products, recent_news,"
+                            " fit_score (1-10)."
+                        ),
                         "temperature": 0.4,
                     },
                     "position_x": 250,
@@ -214,7 +259,11 @@ SEED_TEMPLATES: list[dict] = [
     },
     {
         "name": "PR Review Assistant",
-        "description": "Receives pull request events via webhook, uses AI to review the code changes, and posts a review comment via HTTP.",
+        "description": (
+            "Receives pull request events via webhook, uses AI"
+            " to review the code changes, and posts a review"
+            " comment via HTTP."
+        ),
         "category": "engineering",
         "icon": "git-pull-request",
         "definition": {
@@ -238,7 +287,19 @@ SEED_TEMPLATES: list[dict] = [
                     "label": "Review Code",
                     "config": {
                         "model": "gpt-4o",
-                        "prompt": "Review the following pull request diff and provide constructive feedback. Focus on:\n1. Potential bugs\n2. Security concerns\n3. Performance issues\n4. Code style improvements\n\nPR Title: {{trigger.data.title}}\nDescription: {{trigger.data.description}}\n\nDiff:\n{{trigger.data.diff}}",
+                        "prompt": (
+                            "Review the following pull request"
+                            " diff and provide constructive"
+                            " feedback. Focus on:\n"
+                            "1. Potential bugs\n"
+                            "2. Security concerns\n"
+                            "3. Performance issues\n"
+                            "4. Code style improvements\n\n"
+                            "PR Title: {{trigger.data.title}}\n"
+                            "Description:"
+                            " {{trigger.data.description}}\n\n"
+                            "Diff:\n{{trigger.data.diff}}"
+                        ),
                         "temperature": 0.3,
                         "max_tokens": 2048,
                     },
@@ -278,7 +339,11 @@ SEED_TEMPLATES: list[dict] = [
     },
     {
         "name": "Daily Standup Digest",
-        "description": "Runs on a daily schedule to fetch recent Slack messages from the standup channel, summarizes them with AI, and posts the digest.",
+        "description": (
+            "Runs on a daily schedule to fetch recent Slack"
+            " messages from the standup channel, summarizes"
+            " them with AI, and posts the digest."
+        ),
         "category": "engineering",
         "icon": "calendar-clock",
         "definition": {
@@ -323,7 +388,19 @@ SEED_TEMPLATES: list[dict] = [
                     "label": "Summarize Standup",
                     "config": {
                         "model": "gpt-4o",
-                        "prompt": "Summarize the following standup messages into a daily digest. Group by team member and highlight:\n- What was done yesterday\n- What's planned for today\n- Any blockers\n\nMessages:\n{{action-1.output.messages}}\n\nFormat as a clean Slack message with bold names.",
+                        "prompt": (
+                            "Summarize the following standup"
+                            " messages into a daily digest."
+                            " Group by team member and"
+                            " highlight:\n"
+                            "- What was done yesterday\n"
+                            "- What's planned for today\n"
+                            "- Any blockers\n\n"
+                            "Messages:\n"
+                            "{{action-1.output.messages}}\n\n"
+                            "Format as a clean Slack message"
+                            " with bold names."
+                        ),
                         "temperature": 0.3,
                     },
                     "position_x": 250,
@@ -357,7 +434,10 @@ SEED_TEMPLATES: list[dict] = [
 
 
 async def seed_templates(db: AsyncSession) -> int:
-    """Insert official templates if they don't already exist. Returns count of inserted templates."""
+    """Insert official templates if they don't already exist.
+
+    Returns count of inserted templates.
+    """
     inserted = 0
     for tpl_data in SEED_TEMPLATES:
         result = await db.execute(

@@ -30,7 +30,10 @@ class SlackTool(IntegrationTool):
         ToolAction(
             name="read_messages",
             description="Read recent messages from a channel.",
-            parameters={"channel": "Channel name or ID", "limit": "Number of messages (default 10)"},
+            parameters={
+                "channel": "Channel name or ID",
+                "limit": "Number of messages (default 10)",
+            },
         ),
     ]
 
@@ -88,10 +91,7 @@ class SlackTool(IntegrationTool):
         if not data.get("ok"):
             return {"success": False, "error": data.get("error", "unknown_error")}
 
-        channels = [
-            {"id": ch["id"], "name": ch["name"]}
-            for ch in data.get("channels", [])
-        ]
+        channels = [{"id": ch["id"], "name": ch["name"]} for ch in data.get("channels", [])]
         return {"success": True, "channels": channels}
 
     async def _read_messages(self, token: str, params: dict) -> dict:

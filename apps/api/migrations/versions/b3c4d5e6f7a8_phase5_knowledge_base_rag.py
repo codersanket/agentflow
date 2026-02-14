@@ -95,7 +95,11 @@ def upgrade() -> None:
         *_ts_cols(),
     )
     op.create_index("ix_document_chunks_document_id", "document_chunks", ["document_id"])
-    op.create_index("ix_document_chunks_knowledge_base_id", "document_chunks", ["knowledge_base_id"])
+    op.create_index(
+        "ix_document_chunks_knowledge_base_id",
+        "document_chunks",
+        ["knowledge_base_id"],
+    )
 
     # Add vector column using raw SQL (pgvector)
     op.execute("ALTER TABLE document_chunks ADD COLUMN embedding vector(1536)")

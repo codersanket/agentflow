@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.agent import Agent
@@ -153,9 +153,7 @@ async def _get_template_or_404(
     db: AsyncSession,
     template_id: UUID,
 ) -> AgentTemplate:
-    result = await db.execute(
-        select(AgentTemplate).where(AgentTemplate.id == template_id)
-    )
+    result = await db.execute(select(AgentTemplate).where(AgentTemplate.id == template_id))
     template = result.scalar_one_or_none()
     if template is None:
         raise HTTPException(

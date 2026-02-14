@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,9 +42,11 @@ class Execution(BaseModel):
     metadata_: Mapped[dict] = mapped_column("metadata", JSONB, server_default="{}", nullable=False)
 
     # Relationships
-    agent: Mapped["Agent"] = relationship(back_populates="executions")  # noqa: F821
+    agent: Mapped[Agent] = relationship(back_populates="executions")  # noqa: F821
     steps: Mapped[list[ExecutionStep]] = relationship(
-        back_populates="execution", cascade="all, delete-orphan", order_by="ExecutionStep.step_order"
+        back_populates="execution",
+        cascade="all, delete-orphan",
+        order_by="ExecutionStep.step_order",
     )
     logs: Mapped[list[ExecutionLog]] = relationship(
         back_populates="execution", cascade="all, delete-orphan", order_by="ExecutionLog.created_at"

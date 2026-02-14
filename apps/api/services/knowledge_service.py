@@ -9,11 +9,10 @@ from uuid import UUID
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from engine.rag.embeddings import generate_embeddings
 from engine.rag.retrieval import vector_search
-from models.knowledge import Document, DocumentChunk, KnowledgeBase
+from models.knowledge import Document, KnowledgeBase
 from schemas.common import PaginatedResponse
 from schemas.knowledge import (
     ChunkResultSchema,
@@ -62,9 +61,7 @@ async def list_knowledge_bases(
         try:
             cursor_bytes = base64.b64decode(cursor)
             cursor_val = cursor_bytes.decode("utf-8")
-            query = query.where(
-                KnowledgeBase.created_at < datetime.fromisoformat(cursor_val)
-            )
+            query = query.where(KnowledgeBase.created_at < datetime.fromisoformat(cursor_val))
         except Exception:
             pass
 
@@ -122,7 +119,7 @@ async def upload_document(
     kb_id: UUID,
     file: UploadFile,
 ) -> DocumentUploadResponse:
-    kb = await _get_kb_or_404(db, org_id, kb_id)
+    await _get_kb_or_404(db, org_id, kb_id)
 
     # Determine file type from extension
     filename = file.filename or "unnamed"

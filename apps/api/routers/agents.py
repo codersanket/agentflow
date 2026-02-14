@@ -83,7 +83,11 @@ async def delete_agent(
     await agent_service.delete_agent(db, org_id, agent_id)
 
 
-@router.post("/{agent_id}/publish", response_model=AgentVersionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{agent_id}/publish",
+    response_model=AgentVersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def publish_version(
     agent_id: UUID,
     data: PublishVersionRequest,

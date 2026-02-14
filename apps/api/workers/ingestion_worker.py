@@ -41,7 +41,11 @@ def ingest_document(self, document_id: str) -> dict:
 
     try:
         result = _run_async(_ingest(document_id))
-        logger.info("Ingestion for document %s completed: %d chunks", document_id, result["chunk_count"])
+        logger.info(
+            "Ingestion for document %s completed: %d chunks",
+            document_id,
+            result["chunk_count"],
+        )
         return result
     except Exception as exc:
         logger.exception("Ingestion for document %s failed: %s", document_id, exc)
@@ -52,18 +56,16 @@ def ingest_document(self, document_id: str) -> dict:
 
 
 async def _ingest(document_id: str) -> dict:
+    from sqlalchemy import select
+
     from core.database import async_session_factory
     from engine.rag.chunking import RecursiveCharacterSplitter
     from engine.rag.embeddings import generate_embeddings
     from models.knowledge import Document, DocumentChunk, KnowledgeBase
 
-    from sqlalchemy import select
-
     async with async_session_factory() as db:
         # Load document
-        result = await db.execute(
-            select(Document).where(Document.id == UUID(document_id))
-        )
+        result = await db.execute(select(Document).where(Document.id == UUID(document_id)))
         doc = result.scalar_one_or_none()
         if doc is None:
             raise ValueError(f"Document {document_id} not found")
@@ -177,8 +179,6 @@ async def _mark_failed(document_id: str, error_message: str) -> None:
 
     async with async_session_factory() as db:
         await db.execute(
-            update(Document)
-            .where(Document.id == UUID(document_id))
-            .values(status="failed")
+            update(Document).where(Document.id == UUID(document_id)).values(status="failed")
         )
         await db.commit()

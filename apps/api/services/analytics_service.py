@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
-from decimal import Decimal
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, cast, func, select, Date
+from sqlalchemy import Date, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.agent import Agent
@@ -20,9 +19,7 @@ async def get_overview(
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
 
     # Total executions
-    total_q = await db.execute(
-        select(func.count(Execution.id)).where(Execution.org_id == org_id)
-    )
+    total_q = await db.execute(select(func.count(Execution.id)).where(Execution.org_id == org_id))
     total_executions = total_q.scalar() or 0
 
     # Executions in last 7 days
@@ -110,12 +107,10 @@ async def get_usage_over_time(
             func.count(Execution.id).label("total_runs"),
             func.sum(Execution.total_tokens).label("total_tokens"),
             func.sum(Execution.total_cost).label("total_cost"),
-            func.count(
-                case((Execution.status == "completed", Execution.id))
-            ).label("success_count"),
-            func.count(
-                case((Execution.status == "failed", Execution.id))
-            ).label("failure_count"),
+            func.count(case((Execution.status == "completed", Execution.id))).label(
+                "success_count"
+            ),
+            func.count(case((Execution.status == "failed", Execution.id))).label("failure_count"),
         )
         .where(
             Execution.org_id == org_id,
@@ -149,9 +144,7 @@ async def get_agent_metrics(
 ) -> dict:
     """Per-agent metrics."""
     # Verify agent belongs to org
-    agent_q = await db.execute(
-        select(Agent).where(Agent.id == agent_id, Agent.org_id == org_id)
-    )
+    agent_q = await db.execute(select(Agent).where(Agent.id == agent_id, Agent.org_id == org_id))
     agent = agent_q.scalar_one_or_none()
     if agent is None:
         raise HTTPException(

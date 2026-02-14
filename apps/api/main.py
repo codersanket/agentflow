@@ -13,7 +13,8 @@ from core.redis import close_redis
 from routers.agents import router as agents_router
 from routers.analytics import router as analytics_router
 from routers.auth import router as auth_router
-from routers.executions import agent_execution_router, router as executions_router
+from routers.executions import agent_execution_router
+from routers.executions import router as executions_router
 from routers.integrations import router as integrations_router
 from routers.knowledge import router as knowledge_router
 from routers.org import router as org_router

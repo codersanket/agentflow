@@ -44,9 +44,7 @@ async def vector_search(
             DocumentChunk.knowledge_base_id == knowledge_base_id,
             DocumentChunk.embedding.isnot(None),
         )
-        .order_by(
-            DocumentChunk.embedding.cosine_distance(text(f"'{embedding_str}'::vector"))
-        )
+        .order_by(DocumentChunk.embedding.cosine_distance(text(f"'{embedding_str}'::vector")))
         .limit(top_k)
     )
 
