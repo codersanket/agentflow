@@ -22,7 +22,10 @@ async def receive_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Receive a webhook trigger for an agent. No auth required -- the webhook URL acts as the secret."""
+    """Receive a webhook trigger for an agent.
+
+    No auth required -- the webhook URL acts as the secret.
+    """
 
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()

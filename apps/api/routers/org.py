@@ -217,6 +217,7 @@ async def test_ai_provider(
     # Fallback to env vars
     if not api_key and provider in ("openai", "anthropic", "google"):
         from core.config import settings
+
         env_map = {
             "openai": "OPENAI_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
@@ -226,6 +227,7 @@ async def test_ai_provider(
 
     if not base_url and provider == "ollama":
         from core.config import settings
+
         base_url = getattr(settings, "OLLAMA_URL", None)
 
     return await org_service.test_ai_provider(

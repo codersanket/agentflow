@@ -304,7 +304,8 @@ async def set_ai_provider(
     if provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported provider: {provider}. Must be one of: {', '.join(SUPPORTED_PROVIDERS)}",
+            detail=f"Unsupported provider: {provider}. "
+            f"Must be one of: {', '.join(SUPPORTED_PROVIDERS)}",
         )
 
     org = await _load_org(db, org_id)
@@ -338,7 +339,8 @@ async def remove_ai_provider(db: AsyncSession, org_id: UUID, provider: str) -> N
     if provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported provider: {provider}. Must be one of: {', '.join(SUPPORTED_PROVIDERS)}",
+            detail=f"Unsupported provider: {provider}. "
+            f"Must be one of: {', '.join(SUPPORTED_PROVIDERS)}",
         )
 
     org = await _load_org(db, org_id)
@@ -362,7 +364,8 @@ async def test_ai_provider(
     if provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported provider: {provider}. Must be one of: {', '.join(SUPPORTED_PROVIDERS)}",
+            detail=f"Unsupported provider: {provider}. "
+            f"Must be one of: {', '.join(SUPPORTED_PROVIDERS)}",
         )
 
     try:

@@ -12,7 +12,6 @@ from core.config import settings
 from core.database import get_db
 from core.dependencies import get_current_org, get_current_user
 from core.redis import get_redis
-from core.security import decode_token
 from models.user import User
 from schemas.integration import (
     AvailableIntegrationResponse,
@@ -163,23 +162,35 @@ async def slack_oauth_callback(
     return _oauth_success_page()
 
 
-def _oauth_success_page() -> str:
-    return """<!DOCTYPE html>
-<html><head><title>Connected</title></head>
-<body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;color:#fafafa">
-<div style="text-align:center">
-<h2 style="color:#22c55e">&#10003; Slack Connected</h2>
-<p>This window will close automatically.</p>
-<script>window.opener&&window.opener.postMessage({type:'oauth_success',provider:'slack'},'*');setTimeout(()=>window.close(),1500);</script>
-</div></body></html>"""
+def _oauth_success_page() -> str:  # noqa: E501
+    return (
+        "<!DOCTYPE html>"
+        "<html><head><title>Connected</title></head>"
+        '<body style="font-family:system-ui;display:flex;'
+        "align-items:center;justify-content:center;"
+        'height:100vh;margin:0;background:#0a0a0a;color:#fafafa">'
+        '<div style="text-align:center">'
+        '<h2 style="color:#22c55e">&#10003; Slack Connected</h2>'
+        "<p>This window will close automatically.</p>"
+        "<script>window.opener&&window.opener.postMessage("
+        "{type:'oauth_success',provider:'slack'},'*');"
+        "setTimeout(()=>window.close(),1500);</script>"
+        "</div></body></html>"
+    )
 
 
 def _oauth_error_page(message: str) -> str:
-    return f"""<!DOCTYPE html>
-<html><head><title>Error</title></head>
-<body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;color:#fafafa">
-<div style="text-align:center">
-<h2 style="color:#ef4444">&#10007; Connection Failed</h2>
-<p>{message}</p>
-<script>window.opener&&window.opener.postMessage({{type:'oauth_error',provider:'slack',message:'{message}'}},'*');setTimeout(()=>window.close(),3000);</script>
-</div></body></html>"""
+    return (
+        "<!DOCTYPE html>"
+        "<html><head><title>Error</title></head>"
+        '<body style="font-family:system-ui;display:flex;'
+        "align-items:center;justify-content:center;"
+        'height:100vh;margin:0;background:#0a0a0a;color:#fafafa">'
+        '<div style="text-align:center">'
+        '<h2 style="color:#ef4444">&#10007; Connection Failed</h2>'
+        f"<p>{message}</p>"
+        "<script>window.opener&&window.opener.postMessage("
+        f"{{type:'oauth_error',provider:'slack',message:'{message}'}},"
+        "'*');setTimeout(()=>window.close(),3000);</script>"
+        "</div></body></html>"
+    )

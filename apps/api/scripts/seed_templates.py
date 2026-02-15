@@ -49,7 +49,7 @@ TEMPLATES: list[dict] = [
                     "label": "Classify Ticket",
                     "config": {
                         "model": "gpt-4o",
-                        "system_prompt": "You are a support ticket classifier. Classify the ticket into one of: billing, technical, feature_request, bug. Also determine urgency: low, medium, high. Respond with JSON: {\"category\": \"...\", \"urgency\": \"...\", \"summary\": \"...\"}",
+                        "system_prompt": 'You are a support ticket classifier. Classify the ticket into one of: billing, technical, feature_request, bug. Also determine urgency: low, medium, high. Respond with JSON: {"category": "...", "urgency": "...", "summary": "..."}',
                         "prompt": "Classify this support ticket:\n\n{{Webhook Trigger.output.payload.message}}",
                         "temperature": 0.3,
                         "max_tokens": 256,
@@ -187,7 +187,7 @@ TEMPLATES: list[dict] = [
                     "label": "Score Lead",
                     "config": {
                         "model": "gpt-4o",
-                        "system_prompt": "You are a lead qualification expert. Analyze the lead data and determine if it's a high-quality lead. Respond with JSON: {\"score\": 0-100, \"qualified\": true/false, \"reason\": \"...\"}",
+                        "system_prompt": 'You are a lead qualification expert. Analyze the lead data and determine if it\'s a high-quality lead. Respond with JSON: {"score": 0-100, "qualified": true/false, "reason": "..."}',
                         "prompt": "Score this lead:\n\nName: {{Webhook Trigger.output.payload.name}}\nCompany: {{Webhook Trigger.output.payload.company}}\nEmail: {{Webhook Trigger.output.payload.email}}\nMessage: {{Webhook Trigger.output.payload.message}}",
                         "temperature": 0.3,
                         "max_tokens": 256,
@@ -205,7 +205,7 @@ TEMPLATES: list[dict] = [
                         "condition": {
                             "left": "{{Score Lead.output.text}}",
                             "operator": "contains",
-                            "right": "\"qualified\": true",
+                            "right": '"qualified": true',
                         },
                     },
                     "position_x": 300,

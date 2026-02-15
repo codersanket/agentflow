@@ -554,36 +554,32 @@ class Orchestrator:
         fallback_order: list[str] = []
 
         # OpenAI: org settings first, then env var
-        openai_key = (
-            ai_providers.get("openai", {}).get("api_key")
-            or getattr(settings, "OPENAI_API_KEY", None)
+        openai_key = ai_providers.get("openai", {}).get("api_key") or getattr(
+            settings, "OPENAI_API_KEY", None
         )
         if openai_key:
             providers["openai"] = OpenAIProvider(api_key=openai_key)
             fallback_order.append("openai")
 
         # Anthropic: org settings first, then env var
-        anthropic_key = (
-            ai_providers.get("anthropic", {}).get("api_key")
-            or getattr(settings, "ANTHROPIC_API_KEY", None)
+        anthropic_key = ai_providers.get("anthropic", {}).get("api_key") or getattr(
+            settings, "ANTHROPIC_API_KEY", None
         )
         if anthropic_key:
             providers["anthropic"] = AnthropicProvider(api_key=anthropic_key)
             fallback_order.append("anthropic")
 
         # Google: org settings first, then env var
-        google_key = (
-            ai_providers.get("google", {}).get("api_key")
-            or getattr(settings, "GOOGLE_API_KEY", None)
+        google_key = ai_providers.get("google", {}).get("api_key") or getattr(
+            settings, "GOOGLE_API_KEY", None
         )
         if google_key:
             providers["google"] = GoogleProvider(api_key=google_key)
             fallback_order.append("google")
 
         # Ollama: org settings first, then env var
-        ollama_url = (
-            ai_providers.get("ollama", {}).get("base_url")
-            or getattr(settings, "OLLAMA_URL", None)
+        ollama_url = ai_providers.get("ollama", {}).get("base_url") or getattr(
+            settings, "OLLAMA_URL", None
         )
         if ollama_url:
             providers["ollama"] = OllamaProvider(base_url=ollama_url)

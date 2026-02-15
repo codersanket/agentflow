@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime
-from uuid import UUID
 
 from croniter import croniter
 from sqlalchemy import select
@@ -68,16 +67,12 @@ async def _check_and_dispatch() -> None:
             try:
                 cron_expr = (agent.trigger_config or {}).get("cron")
                 if not cron_expr:
-                    logger.warning(
-                        "Agent %s has schedule trigger but no cron expression", agent.id
-                    )
+                    logger.warning("Agent %s has schedule trigger but no cron expression", agent.id)
                     continue
 
                 # Validate cron expression
                 if not croniter.is_valid(cron_expr):
-                    logger.warning(
-                        "Agent %s has invalid cron expression: %s", agent.id, cron_expr
-                    )
+                    logger.warning("Agent %s has invalid cron expression: %s", agent.id, cron_expr)
                     continue
 
                 # Check if current time matches the cron schedule within the 60s window
@@ -107,9 +102,7 @@ async def _check_and_dispatch() -> None:
                 )
                 version = version_result.scalar_one_or_none()
                 if version is None:
-                    logger.warning(
-                        "Agent %s has no published version, skipping schedule", agent.id
-                    )
+                    logger.warning("Agent %s has no published version, skipping schedule", agent.id)
                     continue
 
                 # Update last_scheduled_run before dispatching
@@ -167,7 +160,10 @@ async def _dispatch_execution(
         agent_version_id=version.id,
         org_id=agent.org_id,
         triggered_by="schedule",
-        trigger_data={"cron": agent.trigger_config.get("cron"), "scheduled_at": datetime.now(UTC).isoformat()},
+        trigger_data={
+            "cron": agent.trigger_config.get("cron"),
+            "scheduled_at": datetime.now(UTC).isoformat(),
+        },
         status="pending",
     )
     db.add(execution)
