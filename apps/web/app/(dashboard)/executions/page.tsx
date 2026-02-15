@@ -28,6 +28,7 @@ import {
   type TimelineStep,
 } from "@/components/executions/execution-timeline";
 import { api, type Execution } from "@/lib/api";
+import { toast } from "sonner";
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -63,7 +64,7 @@ export default function ExecutionsPage() {
       const res = await api.executions.list(params);
       setExecutions(res.items);
     } catch {
-      // ignore
+      toast.error("Failed to load executions");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -110,6 +111,7 @@ export default function ExecutionsPage() {
         }))
       );
     } catch {
+      toast.error("Failed to load execution steps");
       setSteps([]);
     }
   };

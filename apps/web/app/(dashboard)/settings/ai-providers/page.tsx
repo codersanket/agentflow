@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { api, type AIProviderConfig, type AIProviderTestResult } from "@/lib/api";
+import { toast } from "sonner";
 
 interface ProviderMeta {
   key: string;
@@ -120,7 +121,7 @@ export default function AIProvidersPage() {
       }
       setConfigs(map);
     } catch {
-      // API may not be available yet, silently handle
+      toast.error("Failed to load AI providers");
     } finally {
       setLoading(false);
     }

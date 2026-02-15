@@ -17,6 +17,7 @@ import { CostTable } from "@/components/analytics/cost-table";
 import { api } from "@/lib/api";
 import type { AnalyticsOverview, UsageDataPoint, CostBreakdownItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type DateRange = "7d" | "30d" | "90d";
 
@@ -74,7 +75,7 @@ export default function AnalyticsPage() {
       setUsage(usageData);
       setCosts(costData);
     } catch {
-      // error handled by api client
+      toast.error("Failed to load analytics");
     } finally {
       setLoading(false);
     }

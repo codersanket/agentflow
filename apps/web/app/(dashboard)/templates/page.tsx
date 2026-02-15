@@ -9,6 +9,7 @@ import { TemplateCard } from "@/components/templates/template-card";
 import { api } from "@/lib/api";
 import type { Template } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -41,7 +42,7 @@ export default function TemplatesPage() {
       const res = await api.templates.list(params);
       setTemplates(res.items);
     } catch {
-      // error handled by api client
+      toast.error("Failed to load templates");
     } finally {
       setLoading(false);
     }

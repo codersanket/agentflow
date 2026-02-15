@@ -23,6 +23,7 @@ import { AgentCard } from "@/components/agents/agent-card";
 import { CreateAgentDialog } from "@/components/agents/create-agent-dialog";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { api, type Agent } from "@/lib/api";
+import { toast } from "sonner";
 
 export default function AgentsPage() {
   const router = useRouter();
@@ -111,7 +112,7 @@ export default function AgentsPage() {
         )
       );
     } catch {
-      // silently fail for now
+      toast.error("Failed to update agent status");
     }
   };
 
@@ -119,7 +120,7 @@ export default function AgentsPage() {
     try {
       await api.agents.execute(agentId);
     } catch {
-      // silently fail for now
+      toast.error("Failed to execute agent");
     }
   };
 

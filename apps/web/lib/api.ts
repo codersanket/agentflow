@@ -173,18 +173,12 @@ async function uploadFile<T>(path: string, file: File): Promise<T> {
 export interface LoginResponse {
   access_token: string;
   token_type: string;
-  user: {
-    id: string;
-    email: string;
-    full_name: string;
-    org_id: string;
-    role: string;
-  };
+  expires_in: number;
 }
 
 export interface SignupInput {
   org_name: string;
-  full_name: string;
+  name: string;
   email: string;
   password: string;
 }
@@ -192,21 +186,21 @@ export interface SignupInput {
 export interface SignupResponse {
   access_token: string;
   token_type: string;
-  user: {
-    id: string;
-    email: string;
-    full_name: string;
-    org_id: string;
-    role: string;
-  };
+  expires_in: number;
 }
 
 export interface UserResponse {
   id: string;
   email: string;
-  full_name: string;
-  org_id: string;
+  name: string | null;
+  avatar_url: string | null;
   role: string;
+  org: {
+    id: string;
+    name: string;
+    slug: string;
+    plan: string;
+  };
 }
 
 export interface AgentNodeSchema {
@@ -378,6 +372,28 @@ export interface CostBreakdownItem {
   total_cost: number;
 }
 
+export interface OrgMember {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  joined_at: string;
+}
+
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface ApiKeyCreated {
+  id: string;
+  name: string;
+  key: string; // Full key, shown only once
+}
+
 export interface AIProviderConfig {
   provider: string;
   api_key: string | null;
@@ -505,6 +521,8 @@ export const api = {
       post<Execution>(`/agents/${id}/execute`, data),
     test: (id: string, data: Record<string, unknown>) =>
       post<Execution>(`/agents/${id}/test`, data),
+    rollback: (agentId: string, versionId: string) =>
+      post<Agent>(`/agents/${agentId}/versions/${versionId}/rollback`),
   },
   executions: {
     list: (params?: Record<string, string>) =>
@@ -569,6 +587,18 @@ export const api = {
   },
   org: {
     get: () => get<{ id: string; name: string; slug: string; plan: string; settings: Record<string, unknown>; created_at: string }>("/org"),
+    update: (data: { name: string }) => put<{ id: string; name: string; slug: string; plan: string; settings: Record<string, unknown>; created_at: string }>("/org", data),
+    members: {
+      list: () => get<OrgMember[]>("/org/members"),
+      invite: (data: { email: string; role: string }) => post<OrgMember>("/org/members/invite", data),
+      updateRole: (memberId: string, role: string) => put<OrgMember>(`/org/members/${memberId}`, { role }),
+      remove: (memberId: string) => del<void>(`/org/members/${memberId}`),
+    },
+    apiKeys: {
+      list: () => get<ApiKeyItem[]>("/org/api-keys"),
+      create: (data: { name: string }) => post<ApiKeyCreated>("/org/api-keys", data),
+      revoke: (keyId: string) => del<void>(`/org/api-keys/${keyId}`),
+    },
     aiProviders: {
       list: () => get<{ providers: AIProviderConfig[] }>("/org/ai-providers"),
       set: (provider: string, data: { api_key?: string; base_url?: string }) =>

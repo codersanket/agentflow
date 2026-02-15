@@ -18,7 +18,7 @@ from engine.executor import RetryPolicy, StepExecutor
 from engine.handlers.human_handler import HumanApprovalRequiredError
 from engine.providers.router import ProviderRouter
 from models.agent import AgentEdge, AgentNode, AgentVersion
-from models.execution import Execution
+from models.execution import Execution, ExecutionStep
 from models.organization import Organization
 
 logger = logging.getLogger(__name__)
@@ -230,6 +230,207 @@ class Orchestrator:
                 {
                     "error": str(exc),
                 },
+            )
+            raise
+
+        finally:
+            # Clean up provider HTTP clients
+            await provider_router.close()
+
+    async def resume(self, execution_id: UUID) -> dict[str, Any]:
+        """Resume an execution after a human approval step.
+
+        Rebuilds context from completed/approved steps, then continues
+        execution from the next node after the approved one.
+        """
+        # Load execution
+        result = await self._db.execute(select(Execution).where(Execution.id == execution_id))
+        execution = result.scalar_one_or_none()
+        if execution is None:
+            raise ValueError(f"Execution {execution_id} not found")
+
+        # Load agent version
+        version = await self._load_agent_version(execution)
+
+        # Mark execution as running
+        execution.status = "running"
+        await self._db.flush()
+
+        await self._emit_event(execution_id, "execution.resumed", {})
+
+        # Load nodes and edges
+        nodes_result = await self._db.execute(
+            select(AgentNode).where(AgentNode.agent_version_id == version.id)
+        )
+        nodes = list(nodes_result.scalars().all())
+
+        edges_result = await self._db.execute(
+            select(AgentEdge).where(AgentEdge.agent_version_id == version.id)
+        )
+        edges = list(edges_result.scalars().all())
+
+        # Sort nodes topologically
+        sorted_nodes = _topological_sort(nodes, edges)
+
+        # Build lookup maps for branching
+        node_map = {n.id: n for n in nodes}
+        incoming_edges: dict[UUID, list[AgentEdge]] = defaultdict(list)
+        for edge in edges:
+            incoming_edges[edge.target_node_id].append(edge)
+
+        # Load completed steps to rebuild context
+        steps_result = await self._db.execute(
+            select(ExecutionStep)
+            .where(
+                ExecutionStep.execution_id == execution_id,
+                ExecutionStep.status.in_(["completed", "approved"]),
+            )
+            .order_by(ExecutionStep.step_order)
+        )
+        completed_steps = list(steps_result.scalars().all())
+        completed_node_ids: set[UUID] = {
+            s.node_id for s in completed_steps if s.node_id is not None
+        }
+
+        # Load org settings for AI provider keys
+        org_result = await self._db.execute(
+            select(Organization).where(Organization.id == execution.org_id)
+        )
+        org = org_result.scalar_one_or_none()
+        org_settings = org.settings if org else {}
+
+        # Load integration credentials into context
+        integrations_ctx = await self._load_integrations(execution.org_id)
+
+        # Build provider router from org settings / env
+        provider_router = self._build_provider_router(org_settings=org_settings)
+        cost_tracker = CostTracker()
+
+        # Build retry policy from agent settings
+        agent_settings = execution.metadata_ or {}
+        retry_policy = RetryPolicy(
+            max_retries=agent_settings.get("max_retries", 3),
+        )
+
+        step_executor = StepExecutor(
+            db=self._db,
+            execution_id=execution_id,
+            provider_router=provider_router,
+            cost_tracker=cost_tracker,
+            retry_policy=retry_policy,
+        )
+
+        # Rebuild context from completed steps
+        context: dict[str, Any] = {
+            "trigger": {"data": execution.trigger_data},
+            "execution_id": str(execution_id),
+            "integrations": integrations_ctx,
+        }
+
+        for step in completed_steps:
+            if step.node_id and step.output_data is not None:
+                node = node_map.get(step.node_id)
+                if node:
+                    node_key = node.label or str(node.id)
+                    context[node_key] = {"output": step.output_data}
+
+        # Track skipped nodes for conditional branching
+        skipped_nodes: set[UUID] = set()
+
+        # Determine the next step_order (continue numbering from where we left off)
+        next_step_order = max((s.step_order or 0 for s in completed_steps), default=-1) + 1
+
+        # Execute remaining nodes in topological order
+        try:
+            for node in sorted_nodes:
+                # Skip nodes that have already been completed/approved
+                if node.id in completed_node_ids:
+                    continue
+
+                # --- Branching logic ---
+                node_incoming = incoming_edges.get(node.id, [])
+
+                if node_incoming:
+                    should_skip = self._should_skip_node(
+                        node, node_incoming, node_map, skipped_nodes, context
+                    )
+                    if should_skip:
+                        skipped_nodes.add(node.id)
+                        logger.info(
+                            "Skipping node %s (%s) — branch condition not met",
+                            node.label or node.id,
+                            node.node_type,
+                        )
+                        await self._emit_event(
+                            execution_id,
+                            "step.skipped",
+                            {"node_id": str(node.id), "reason": "branch_condition"},
+                        )
+                        continue
+
+                output = await step_executor.execute_node(
+                    node_id=node.id,
+                    node_type=node.node_type,
+                    node_config=node.config,
+                    context=context,
+                    step_order=next_step_order,
+                )
+                next_step_order += 1
+
+                # Store node output in context keyed by node label or id
+                node_key = node.label or str(node.id)
+                context[node_key] = {"output": output.data}
+
+            # Mark execution as completed
+            execution.status = "completed"
+            execution.completed_at = datetime.now(UTC)
+            execution.total_tokens = (execution.total_tokens or 0) + cost_tracker.total_tokens
+            execution.total_cost = (execution.total_cost or Decimal("0")) + Decimal(
+                str(cost_tracker.total_cost)
+            )
+            await self._db.flush()
+
+            await self._emit_event(
+                execution_id,
+                "execution.completed",
+                {
+                    "total_tokens": execution.total_tokens,
+                    "total_cost": float(execution.total_cost),
+                },
+            )
+
+            return {
+                "status": "completed",
+                "total_tokens": execution.total_tokens,
+                "total_cost": float(execution.total_cost),
+                "context": context,
+            }
+
+        except HumanApprovalRequiredError:
+            execution.status = "waiting_approval"
+            execution.total_tokens = (execution.total_tokens or 0) + cost_tracker.total_tokens
+            execution.total_cost = (execution.total_cost or Decimal("0")) + Decimal(
+                str(cost_tracker.total_cost)
+            )
+            await self._db.flush()
+
+            await self._emit_event(execution_id, "execution.waiting_approval", {})
+            return {"status": "waiting_approval"}
+
+        except Exception as exc:
+            execution.status = "failed"
+            execution.error_message = str(exc)
+            execution.completed_at = datetime.now(UTC)
+            execution.total_tokens = (execution.total_tokens or 0) + cost_tracker.total_tokens
+            execution.total_cost = (execution.total_cost or Decimal("0")) + Decimal(
+                str(cost_tracker.total_cost)
+            )
+            await self._db.flush()
+
+            await self._emit_event(
+                execution_id,
+                "execution.failed",
+                {"error": str(exc)},
             )
             raise
 

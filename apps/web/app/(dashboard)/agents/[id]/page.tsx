@@ -131,6 +131,7 @@ export default function AgentDetailPage({
             : { nodes: [], edges: [] };
         loadDefinition(agentId, data.name, def);
       } catch {
+        toast.error("Failed to load agent");
         router.push("/agents");
       } finally {
         setIsLoading(false);
@@ -257,7 +258,7 @@ function ExecutionsTab({ agentId }: { agentId: string }) {
         const res = await api.executions.list({ agent_id: agentId, limit: "50" });
         setExecutions(res.items);
       } catch {
-        // ignore
+        toast.error("Failed to load executions");
       } finally {
         setIsLoading(false);
       }
@@ -286,6 +287,7 @@ function ExecutionsTab({ agentId }: { agentId: string }) {
         }))
       );
     } catch {
+      toast.error("Failed to load execution steps");
       setSteps([]);
     }
   };
@@ -402,7 +404,7 @@ function SettingsTab({
       });
       onUpdate(updated);
     } catch {
-      // ignore
+      toast.error("Failed to save settings");
     } finally {
       setIsSaving(false);
     }
@@ -481,20 +483,35 @@ function SettingsTab({
 function VersionsTab({ agentId }: { agentId: string }) {
   const [versions, setVersions] = useState<AgentVersion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [rollingBackId, setRollingBackId] = useState<string | null>(null);
+
+  const loadVersions = useCallback(async () => {
+    try {
+      const data = await api.agents.versions(agentId);
+      setVersions(data);
+    } catch {
+      toast.error("Failed to load versions");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [agentId]);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const data = await api.agents.versions(agentId);
-        setVersions(data);
-      } catch {
-        // ignore
-      } finally {
-        setIsLoading(false);
-      }
+    loadVersions();
+  }, [loadVersions]);
+
+  const handleRollback = async (version: AgentVersion) => {
+    setRollingBackId(version.id);
+    try {
+      await api.agents.rollback(agentId, version.id);
+      toast.success(`Rolled back to version ${version.version}`);
+      await loadVersions();
+    } catch {
+      toast.error("Failed to rollback to this version");
+    } finally {
+      setRollingBackId(null);
     }
-    load();
-  }, [agentId]);
+  };
 
   if (isLoading) {
     return (
@@ -518,7 +535,7 @@ function VersionsTab({ agentId }: { agentId: string }) {
 
   return (
     <div className="space-y-3">
-      {versions.map((version) => (
+      {versions.map((version, index) => (
         <div
           key={version.id}
           className="flex items-center justify-between rounded-lg border p-4"
@@ -541,10 +558,21 @@ function VersionsTab({ agentId }: { agentId: string }) {
               {formatRelativeTime(version.created_at)}
             </p>
           </div>
-          <Button variant="outline" size="sm">
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            Rollback
-          </Button>
+          {index > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={rollingBackId !== null}
+              onClick={() => handleRollback(version)}
+            >
+              {rollingBackId === version.id ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Rollback
+            </Button>
+          )}
         </div>
       ))}
     </div>

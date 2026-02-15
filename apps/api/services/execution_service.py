@@ -319,6 +319,9 @@ async def approve_step(
     except Exception:
         pass
 
+    # Resume execution from the next node after the approved step
+    await _resume_execution(db, execution)
+
     return _execution_to_response(execution)
 
 
@@ -382,6 +385,35 @@ async def _run_inline(db: AsyncSession, execution: Execution) -> None:
     except Exception as exc:
         # If orchestrator didn't already mark as failed, do it here
         if execution.status not in ("failed", "completed"):
+            execution.status = "failed"
+            execution.error_message = str(exc)
+            execution.completed_at = datetime.now(UTC)
+            await db.flush()
+
+
+async def _resume_execution(db: AsyncSession, execution: Execution) -> None:
+    """Resume execution after a human approval, dispatching via Celery or inline."""
+    from core.config import settings as app_settings
+
+    if app_settings.CELERY_ENABLED:
+        try:
+            from workers.agent_worker import execute_agent
+
+            # Celery worker will pick up the execution and the orchestrator
+            # will see it's in 'running' status with completed steps
+            execute_agent.delay(str(execution.id))
+            return
+        except Exception:
+            pass  # Fall through to inline
+
+    # Run inline via orchestrator.resume()
+    try:
+        from engine.orchestrator import Orchestrator
+
+        orchestrator = Orchestrator(db)
+        await orchestrator.resume(execution.id)
+    except Exception as exc:
+        if execution.status not in ("failed", "completed", "waiting_approval"):
             execution.status = "failed"
             execution.error_message = str(exc)
             execution.completed_at = datetime.now(UTC)

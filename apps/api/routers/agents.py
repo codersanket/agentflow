@@ -105,6 +105,17 @@ async def list_versions(
     return await agent_service.list_versions(db, org_id, agent_id)
 
 
+@router.post("/{agent_id}/versions/{version_id}/rollback", response_model=AgentResponse)
+async def rollback_agent_version(
+    agent_id: UUID,
+    version_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    org_id: UUID = Depends(get_current_org),
+    current_user: User = Depends(get_current_user),
+) -> AgentResponse:
+    return await agent_service.rollback_to_version(db, org_id, agent_id, version_id, current_user.id)
+
+
 @router.put("/{agent_id}/status", response_model=AgentResponse)
 async def update_status(
     agent_id: UUID,

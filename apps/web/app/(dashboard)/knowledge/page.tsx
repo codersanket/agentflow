@@ -38,6 +38,7 @@ import {
   type KnowledgeBase,
   type KBDocument,
 } from "@/lib/api";
+import { toast } from "sonner";
 
 type ViewState =
   | { mode: "list" }
@@ -89,7 +90,7 @@ export default function KnowledgePage() {
       setSelectedKb(kb);
       setDocuments(docs);
     } catch {
-      // fallback
+      toast.error("Failed to load knowledge base");
     } finally {
       setIsLoadingDetail(false);
     }
@@ -149,7 +150,7 @@ export default function KnowledgePage() {
         setView({ mode: "list" });
       }
     } catch {
-      // silently fail for now
+      toast.error("Failed to delete knowledge base");
     }
   };
 
@@ -159,7 +160,7 @@ export default function KnowledgePage() {
       await api.knowledgeBases.deleteDocument(selectedKb.id, docId);
       setDocuments((prev) => prev.filter((d) => d.id !== docId));
     } catch {
-      // silently fail
+      toast.error("Failed to delete document");
     }
   };
 

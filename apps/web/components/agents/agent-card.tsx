@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Play,
   Pencil,
@@ -12,6 +13,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/lib/api";
 
@@ -76,9 +88,19 @@ export function AgentCard({
   onArchive,
 }: AgentCardProps) {
   const router = useRouter();
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const status = statusConfig[agent.status] || statusConfig.draft;
   const TriggerIcon = triggerIcons[agent.trigger_type || ""] || Webhook;
   const triggerLabel = triggerLabels[agent.trigger_type || ""] || agent.trigger_type || "None";
+
+  const handleArchive = async () => {
+    try {
+      await onArchive?.(agent.id);
+      toast.success("Agent archived");
+    } catch {
+      toast.error("Failed to archive agent");
+    }
+  };
 
   return (
     <Card className="group relative flex flex-col p-4 hover:shadow-md transition-shadow">
@@ -137,7 +159,7 @@ export function AgentCard({
             )}
             {agent.status !== "archived" && (
               <DropdownMenuItem
-                onClick={() => onArchive?.(agent.id)}
+                onClick={() => setArchiveDialogOpen(true)}
                 className="text-destructive focus:text-destructive"
               >
                 <ArchiveIcon className="mr-2 h-4 w-4" />
@@ -155,6 +177,26 @@ export function AgentCard({
         </span>
         <span>Updated {formatRelativeTime(agent.updated_at)}</span>
       </div>
+
+      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Agent</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive &apos;{agent.name}&apos;? Archived agents stop running and won&apos;t process triggers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleArchive}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

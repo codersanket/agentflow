@@ -18,6 +18,7 @@ from engine.handlers import get_handler
 from engine.handlers.base import NodeHandler, NodeOutput
 from engine.handlers.human_handler import HumanApprovalRequiredError
 from engine.providers.router import ProviderRouter
+from engine.variable_resolver import resolve_value
 from models.execution import ExecutionLog, ExecutionStep
 
 logger = logging.getLogger(__name__)
@@ -147,8 +148,11 @@ class StepExecutor:
             # Inject current step id into context for human handler
             context["current_step_id"] = str(step.id)
 
-            # Execute with retry
-            output = await execute_with_retry(handler, node_config, context, self._retry_policy)
+            # Resolve variable templates (e.g. {{Node Label.output.field}}) in config
+            resolved_config = resolve_value(node_config, context)
+
+            # Execute with retry using resolved config
+            output = await execute_with_retry(handler, resolved_config, context, self._retry_policy)
 
             duration_ms = int((time.monotonic() - start_time) * 1000)
 

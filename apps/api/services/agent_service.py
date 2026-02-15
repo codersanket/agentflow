@@ -271,6 +271,103 @@ async def list_versions(
     return [_version_to_response(v) for v in versions]
 
 
+async def rollback_to_version(
+    db: AsyncSession,
+    org_id: UUID,
+    agent_id: UUID,
+    version_id: UUID,
+    user_id: UUID,
+) -> AgentResponse:
+    """Roll back an agent to a previous version by creating a new version with the old version's definition."""
+    agent = await _get_agent_or_404(db, org_id, agent_id)
+
+    if agent.status == "archived":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot rollback an archived agent",
+        )
+
+    # Load the target version with its nodes and edges
+    target_result = await db.execute(
+        select(AgentVersion)
+        .where(AgentVersion.id == version_id, AgentVersion.agent_id == agent_id)
+        .options(selectinload(AgentVersion.nodes), selectinload(AgentVersion.edges))
+    )
+    target_version = target_result.scalar_one_or_none()
+
+    if target_version is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Version not found",
+        )
+
+    # Get next version number
+    max_version_result = await db.execute(
+        select(func.max(AgentVersion.version)).where(AgentVersion.agent_id == agent_id)
+    )
+    max_version = max_version_result.scalar() or 0
+    next_version = max_version + 1
+
+    # Create a new version with the old version's definition
+    new_version = AgentVersion(
+        agent_id=agent_id,
+        version=next_version,
+        definition=target_version.definition,
+        change_message=f"Rollback to v{target_version.version}",
+        created_by=user_id,
+        is_published=True,
+    )
+    db.add(new_version)
+    await db.flush()
+
+    # Duplicate nodes from the target version
+    node_id_map: dict[UUID, UUID] = {}
+    for node in target_version.nodes:
+        new_node = AgentNode(
+            agent_version_id=new_version.id,
+            node_type=node.node_type,
+            node_subtype=node.node_subtype,
+            label=node.label,
+            config=node.config,
+            position_x=node.position_x,
+            position_y=node.position_y,
+        )
+        db.add(new_node)
+        await db.flush()
+        node_id_map[node.id] = new_node.id
+
+    # Duplicate edges from the target version
+    for edge in target_version.edges:
+        new_source = node_id_map.get(edge.source_node_id)
+        new_target = node_id_map.get(edge.target_node_id)
+        if new_source is None or new_target is None:
+            continue
+        new_edge = AgentEdge(
+            agent_version_id=new_version.id,
+            source_node_id=new_source,
+            target_node_id=new_target,
+            condition=edge.condition,
+            label=edge.label,
+        )
+        db.add(new_edge)
+
+    await db.flush()
+
+    # Update agent's updated_at timestamp
+    agent.updated_at = datetime.now(UTC)
+    await db.flush()
+
+    # Reload the new version with relationships
+    version_result = await db.execute(
+        select(AgentVersion)
+        .where(AgentVersion.id == new_version.id)
+        .options(selectinload(AgentVersion.nodes), selectinload(AgentVersion.edges))
+    )
+    loaded_version = version_result.scalar_one()
+
+    return _agent_to_response(agent, loaded_version)
+
+
 async def update_status(
     db: AsyncSession,
     org_id: UUID,

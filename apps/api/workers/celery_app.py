@@ -22,5 +22,12 @@ celery_app.conf.update(
     task_routes={
         "workers.agent_worker.execute_agent": {"queue": "agents"},
         "workers.ingestion_worker.ingest_document": {"queue": "ingestion"},
+        "workers.schedule_worker.check_scheduled_agents": {"queue": "agents"},
+    },
+    beat_schedule={
+        "check-scheduled-agents": {
+            "task": "workers.schedule_worker.check_scheduled_agents",
+            "schedule": 60.0,  # Run every 60 seconds
+        },
     },
 )

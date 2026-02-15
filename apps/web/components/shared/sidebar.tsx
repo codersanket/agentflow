@@ -76,7 +76,7 @@ export function Sidebar() {
           </Avatar>
           <div className="flex-1 truncate">
             <p className="text-sm font-medium truncate">
-              {user?.full_name || "User"}
+              {user?.name || "User"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
               {user?.email || ""}
