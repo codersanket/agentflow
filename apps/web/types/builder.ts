@@ -3,9 +3,9 @@ import type { Node, Edge } from "@xyflow/react";
 export type NodeCategory = "trigger" | "ai" | "action" | "logic" | "human";
 
 export type TriggerSubtype = "webhook" | "schedule" | "manual";
-export type AISubtype = "chat" | "summarize" | "classify" | "extract";
-export type ActionSubtype = "http" | "slack" | "webhook_out" | "email";
-export type LogicSubtype = "if_else" | "switch" | "loop";
+export type AISubtype = "chat" | "summarize" | "classify" | "extract" | "llm_call";
+export type ActionSubtype = "http" | "slack" | "webhook_out" | "email" | "http_request";
+export type LogicSubtype = "if_else" | "switch" | "loop" | "condition";
 export type HumanSubtype = "approval" | "input";
 
 export type NodeSubtype =
@@ -55,6 +55,8 @@ export type ActionNodeData = {
     body?: string;
     channel?: string;
     message?: string;
+    to?: string;
+    subject?: string;
   };
 };
 

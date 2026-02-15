@@ -81,6 +81,8 @@ async def install_template(
     template_id: UUID,
     data: InstallTemplateRequest,
 ) -> Agent:
+    from models.agent import AgentEdge, AgentNode, AgentVersion
+
     template = await _get_template_or_404(db, template_id)
 
     agent_name = data.name or template.name
@@ -97,6 +99,55 @@ async def install_template(
     )
     db.add(agent)
     await db.flush()
+
+    # Create a published version with nodes and edges from the template
+    template_nodes = template.definition.get("nodes", [])
+    template_edges = template.definition.get("edges", [])
+
+    if template_nodes:
+        version = AgentVersion(
+            agent_id=agent.id,
+            version=1,
+            definition={"nodes": template_nodes, "edges": template_edges},
+            change_message="Installed from template",
+            created_by=user_id,
+            is_published=True,
+        )
+        db.add(version)
+        await db.flush()
+
+        # Map template node IDs to real UUIDs
+        import uuid as _uuid
+
+        id_map: dict[str, _uuid.UUID] = {}
+        for tpl_node in template_nodes:
+            node = AgentNode(
+                agent_version_id=version.id,
+                node_type=tpl_node["node_type"],
+                node_subtype=tpl_node.get("node_subtype", tpl_node["node_type"]),
+                label=tpl_node.get("label"),
+                config=tpl_node.get("config", {}),
+                position_x=tpl_node.get("position_x", 0),
+                position_y=tpl_node.get("position_y", 0),
+            )
+            db.add(node)
+            await db.flush()
+            id_map[tpl_node["id"]] = node.id
+
+        for tpl_edge in template_edges:
+            source_id = id_map.get(tpl_edge["source_node_id"])
+            target_id = id_map.get(tpl_edge["target_node_id"])
+            if source_id and target_id:
+                edge = AgentEdge(
+                    agent_version_id=version.id,
+                    source_node_id=source_id,
+                    target_node_id=target_id,
+                    condition=tpl_edge.get("condition"),
+                    label=tpl_edge.get("label"),
+                )
+                db.add(edge)
+
+        await db.flush()
 
     # Increment install count
     template.install_count = template.install_count + 1

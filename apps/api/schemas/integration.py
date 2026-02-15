@@ -39,6 +39,10 @@ class AvailableIntegrationResponse(BaseModel):
     provider: str
     name: str
     description: str
+    auth_method: str = Field(
+        default="credentials",
+        description="How to connect: 'oauth' opens a popup flow, 'credentials' shows a form",
+    )
     actions: list[AvailableActionResponse]
 
 

@@ -9,7 +9,8 @@ import type { AgentNode, AINodeData } from "@/types/builder";
 
 function AINodeComponent(props: NodeProps<AgentNode>) {
   const data = props.data as AINodeData;
-  const modelShort = data.config.model.split("/").pop() || data.config.model;
+  const model = data.config?.model || "AI";
+  const modelShort = model.split("/").pop() || model;
 
   return (
     <BaseNode id={props.id} data={data} selected={props.selected} icon={<Brain className="h-3.5 w-3.5" />}>

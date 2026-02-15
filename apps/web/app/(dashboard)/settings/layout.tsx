@@ -8,6 +8,7 @@ const settingsNav = [
   { href: "/settings", label: "General" },
   { href: "/settings/members", label: "Members" },
   { href: "/settings/api-keys", label: "API Keys" },
+  { href: "/settings/ai-providers", label: "AI Providers" },
 ];
 
 export default function SettingsLayout({

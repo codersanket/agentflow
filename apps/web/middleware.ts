@@ -3,28 +3,33 @@ import type { NextRequest } from "next/server";
 
 const publicPaths = ["/login", "/signup", "/forgot-password"];
 
+const protectedPaths = [
+  "/agents",
+  "/executions",
+  "/integrations",
+  "/knowledge",
+  "/templates",
+  "/analytics",
+  "/settings",
+];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const hasAuthCookie = request.cookies.has("refresh_token");
+  // Check for auth indicator cookie (set client-side after login)
+  const isLoggedIn = request.cookies.has("agentflow_auth");
 
+  // Public paths: if logged in, redirect to dashboard
   if (publicPaths.some((path) => pathname.startsWith(path))) {
-    if (hasAuthCookie) {
+    if (isLoggedIn) {
       return NextResponse.redirect(new URL("/agents", request.url));
     }
     return NextResponse.next();
   }
 
-  if (
-    pathname.startsWith("/agents") ||
-    pathname.startsWith("/executions") ||
-    pathname.startsWith("/integrations") ||
-    pathname.startsWith("/knowledge") ||
-    pathname.startsWith("/templates") ||
-    pathname.startsWith("/analytics") ||
-    pathname.startsWith("/settings")
-  ) {
-    if (!hasAuthCookie) {
+  // Protected paths: if not logged in, redirect to login
+  if (protectedPaths.some((path) => pathname.startsWith(path))) {
+    if (!isLoggedIn) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);

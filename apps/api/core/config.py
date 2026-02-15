@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str | None = None
     OLLAMA_URL: str | None = None
 
+    # Slack OAuth (optional — enables headless Slack connection)
+    SLACK_CLIENT_ID: str | None = None
+    SLACK_CLIENT_SECRET: str | None = None
+    SLACK_REDIRECT_URI: str = "http://localhost:8000/api/v1/integrations/slack/oauth/callback"
+
+    # Frontend URL (for OAuth popup redirect)
+    FRONTEND_URL: str = "http://localhost:3000"
+
+    # Celery — disable to run executions inline (useful for dev without a worker)
+    CELERY_ENABLED: bool = False
+
     # App
     APP_ENV: str = "development"
 

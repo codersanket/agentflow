@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Loader2,
   Play,
@@ -33,6 +34,7 @@ import {
 import { BuilderToolbar } from "@/components/builder/builder-toolbar";
 import { BuilderCanvas } from "@/components/builder/builder-canvas";
 import { NodePalette } from "@/components/builder/node-palette";
+import { PreflightBanner } from "@/components/builder/preflight-banner";
 import {
   ExecutionTimeline,
   type TimelineStep,
@@ -41,9 +43,40 @@ import { useBuilderStore } from "@/stores/builder-store";
 import {
   api,
   type Agent,
+  type AgentNodeSchema,
+  type AgentEdgeSchema,
   type Execution,
   type AgentVersion,
 } from "@/lib/api";
+import type { AgentDefinition, AgentNode, AgentEdge, AgentNodeData, NodeCategory, NodeSubtype } from "@/types/builder";
+
+function apiNodesToReactFlow(
+  nodes: AgentNodeSchema[],
+  edges: AgentEdgeSchema[]
+): AgentDefinition {
+  const rfNodes: AgentNode[] = nodes.map((n) => ({
+    id: n.id,
+    type: n.node_type as NodeCategory,
+    position: { x: n.position_x, y: n.position_y },
+    data: {
+      type: n.node_type,
+      subtype: n.node_subtype,
+      label: n.label || n.node_type,
+      config: n.config || {},
+    } as AgentNodeData,
+  }));
+
+  const rfEdges: AgentEdge[] = edges.map((e) => ({
+    id: e.id,
+    source: e.source_node_id,
+    target: e.target_node_id,
+    type: "custom",
+    label: e.label || undefined,
+    data: { label: e.label },
+  }));
+
+  return { nodes: rfNodes, edges: rfEdges };
+}
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -67,9 +100,9 @@ function formatRelativeTime(dateString: string): string {
 export default function AgentDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id: agentId } = use(params);
+  const agentId = params.id;
   const router = useRouter();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +125,11 @@ export default function AgentDetailPage({
       try {
         const data = await api.agents.get(agentId);
         setAgent(data);
-        loadDefinition(agentId, data.name, { nodes: [], edges: [] });
+        const def =
+          data.latest_version?.nodes?.length
+            ? apiNodesToReactFlow(data.latest_version.nodes, data.latest_version.edges)
+            : { nodes: [], edges: [] };
+        loadDefinition(agentId, data.name, def);
       } catch {
         router.push("/agents");
       } finally {
@@ -101,6 +138,24 @@ export default function AgentDetailPage({
     }
     load();
   }, [agentId, router, loadDefinition]);
+
+  useEffect(() => {
+    const isFirstAgent = localStorage.getItem("agentflow_first_agent_created");
+    if (isFirstAgent) {
+      localStorage.removeItem("agentflow_first_agent_created");
+      const fromTemplate = localStorage.getItem("agentflow_from_template");
+      if (fromTemplate) {
+        localStorage.removeItem("agentflow_from_template");
+        toast.success(
+          "Your agent is ready! Review the workflow below, connect any required integrations, then hit Publish."
+        );
+      } else {
+        toast.success(
+          "Your first agent is ready! Drag nodes from the left panel to build your workflow."
+        );
+      }
+    }
+  }, []);
 
   const handleSave = useCallback(async () => {
     const definition = getDefinition();
@@ -164,6 +219,7 @@ export default function AgentDetailPage({
               onSave={handleSave}
               onNameChange={handleNameChange}
             />
+            <PreflightBanner />
             <div className="flex flex-1 overflow-hidden">
               <NodePalette />
               <div className="flex-1">
@@ -293,7 +349,7 @@ function ExecutionsTab({ agentId }: { agentId: string }) {
               </TableCell>
               <TableCell className="text-sm">{exec.total_tokens}</TableCell>
               <TableCell className="text-sm">
-                ${exec.total_cost.toFixed(4)}
+                ${Number(exec.total_cost).toFixed(4)}
               </TableCell>
             </TableRow>
             {expandedId === exec.id && (

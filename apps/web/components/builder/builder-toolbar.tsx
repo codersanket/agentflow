@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useBuilderStore } from "@/stores/builder-store";
 import { PublishDialog } from "./publish-dialog";
 import { TestRunDialog } from "./test-run-dialog";
 
@@ -56,6 +57,7 @@ export function BuilderToolbar({
   const [isSaving, setIsSaving] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
+  const getDefinition = useBuilderStore((s) => s.getDefinition);
 
   const handleSave = useCallback(async () => {
     if (!onSave) return;
@@ -198,6 +200,27 @@ export function BuilderToolbar({
         agentId={agentId}
         open={publishOpen}
         onOpenChange={setPublishOpen}
+        getDefinition={() => {
+          const { nodes, edges } = getDefinition();
+          return {
+            nodes: nodes.map((n) => ({
+              id: n.id,
+              node_type: n.data.type,
+              node_subtype: n.data.subtype,
+              label: n.data.label,
+              config: n.data.config,
+              position_x: n.position.x,
+              position_y: n.position.y,
+            })),
+            edges: edges.map((e) => ({
+              id: e.id,
+              source_node_id: e.source,
+              target_node_id: e.target,
+              condition: null,
+              label: e.data?.label,
+            })),
+          };
+        }}
       />
       <TestRunDialog
         agentId={agentId}

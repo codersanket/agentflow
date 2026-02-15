@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import settings
 from engine.tools.registry import build_default_registry
 from models.integration import Integration
 from schemas.integration import (
@@ -16,6 +17,9 @@ from schemas.integration import (
     ConnectIntegrationRequest,
     IntegrationResponse,
 )
+
+# Providers that support OAuth when configured
+OAUTH_PROVIDERS = {"slack"}
 
 
 def _encrypt_credentials(creds: dict) -> str:
@@ -97,6 +101,13 @@ async def disconnect_integration(
     await db.flush()
 
 
+def _resolve_auth_method(provider_name: str) -> str:
+    """Return 'oauth' if the provider supports it and credentials are configured."""
+    if provider_name == "slack" and settings.SLACK_CLIENT_ID and settings.SLACK_CLIENT_SECRET:
+        return "oauth"
+    return "credentials"
+
+
 def list_available_providers() -> list[AvailableIntegrationResponse]:
     """Return metadata for all built-in integration providers."""
     registry = build_default_registry()
@@ -115,6 +126,7 @@ def list_available_providers() -> list[AvailableIntegrationResponse]:
                 provider=tool.name,
                 name=tool.name.replace("_", " ").title(),
                 description=tool.description,
+                auth_method=_resolve_auth_method(tool.name),
                 actions=actions,
             )
         )

@@ -12,7 +12,7 @@ function LogicNodeComponent(props: NodeProps<AgentNode>) {
   const Icon = isLoop ? Repeat : GitBranch;
 
   const outputHandles =
-    data.subtype === "if_else"
+    data.subtype === "if_else" || data.subtype === "condition"
       ? [
           { id: "true", label: "True" },
           { id: "false", label: "False" },

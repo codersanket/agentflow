@@ -19,11 +19,19 @@ from routers.integrations import router as integrations_router
 from routers.knowledge import router as knowledge_router
 from routers.org import router as org_router
 from routers.templates import router as templates_router
+from routers.webhooks import router as webhooks_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Startup
+    # Startup — seed templates
+    try:
+        from scripts.seed_templates import seed as seed_templates
+
+        await seed_templates()
+    except Exception:
+        pass  # Don't block startup if seeding fails
+
     yield
     # Shutdown
     await engine.dispose()
@@ -75,5 +83,6 @@ api_v1_router.include_router(templates_router)
 api_v1_router.include_router(analytics_router)
 api_v1_router.include_router(integrations_router)
 api_v1_router.include_router(knowledge_router)
+api_v1_router.include_router(webhooks_router)
 
 app.include_router(api_v1_router)

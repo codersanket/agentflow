@@ -46,6 +46,7 @@ interface ExecutionState {
   logs: ExecutionLog[];
   isStreaming: boolean;
   wsConnection: WebSocket | null;
+  nodeStatusMap: Record<string, "pending" | "running" | "completed" | "failed" | "waiting_approval">;
 }
 
 interface ExecutionActions {
@@ -67,6 +68,7 @@ export const useExecutionStore = create<ExecutionState & ExecutionActions>(
     logs: [],
     isStreaming: false,
     wsConnection: null,
+    nodeStatusMap: {},
 
     startStreaming: (executionId: string) => {
       const existing = get().wsConnection;
@@ -204,6 +206,10 @@ export const useExecutionStore = create<ExecutionState & ExecutionActions>(
     addStep: (step) => {
       set((state) => ({
         steps: [...state.steps, step],
+        nodeStatusMap: {
+          ...state.nodeStatusMap,
+          [step.node_id]: step.status,
+        },
       }));
     },
 
@@ -214,11 +220,22 @@ export const useExecutionStore = create<ExecutionState & ExecutionActions>(
     },
 
     updateStep: (stepId, updates) => {
-      set((state) => ({
-        steps: state.steps.map((s) =>
+      set((state) => {
+        const updatedSteps = state.steps.map((s) =>
           s.id === stepId ? { ...s, ...updates } : s
-        ),
-      }));
+        );
+        const updatedNodeStatusMap = { ...state.nodeStatusMap };
+        if (updates.status) {
+          const step = state.steps.find((s) => s.id === stepId);
+          if (step) {
+            updatedNodeStatusMap[step.node_id] = updates.status;
+          }
+        }
+        return {
+          steps: updatedSteps,
+          nodeStatusMap: updatedNodeStatusMap,
+        };
+      });
     },
 
     setExecution: (execution) => {
@@ -234,6 +251,7 @@ export const useExecutionStore = create<ExecutionState & ExecutionActions>(
         logs: [],
         isStreaming: false,
         wsConnection: null,
+        nodeStatusMap: {},
       });
     },
   })

@@ -5,6 +5,7 @@ import { Handle, Position } from "@xyflow/react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBuilderStore } from "@/stores/builder-store";
+import { useExecutionStore } from "@/stores/execution-store";
 import type { AgentNodeData, NodeCategory } from "@/types/builder";
 
 const categoryColors: Record<NodeCategory, string> = {
@@ -16,11 +17,18 @@ const categoryColors: Record<NodeCategory, string> = {
 };
 
 const categoryHeaderColors: Record<NodeCategory, string> = {
-  trigger: "bg-emerald-500/10 text-emerald-700",
-  ai: "bg-violet-500/10 text-violet-700",
-  action: "bg-blue-500/10 text-blue-700",
-  logic: "bg-amber-500/10 text-amber-700",
-  human: "bg-rose-500/10 text-rose-700",
+  trigger: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  ai: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  action: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  logic: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  human: "bg-rose-500/10 text-rose-700 dark:text-rose-400",
+};
+
+const executionStatusClasses: Record<string, string> = {
+  running: "ring-2 ring-blue-500 animate-pulse shadow-lg shadow-blue-500/25",
+  completed: "ring-2 ring-green-500 shadow-lg shadow-green-500/25",
+  failed: "ring-2 ring-red-500 shadow-lg shadow-red-500/25",
+  waiting_approval: "ring-2 ring-yellow-500 animate-pulse shadow-lg shadow-yellow-500/25",
 };
 
 interface BaseNodeProps {
@@ -45,6 +53,7 @@ export function BaseNode({
   outputHandles,
 }: BaseNodeProps) {
   const removeNode = useBuilderStore((s) => s.removeNode);
+  const executionStatus = useExecutionStore((s) => s.nodeStatusMap[id]);
   const category = data.type;
 
   return (
@@ -52,9 +61,34 @@ export function BaseNode({
       className={cn(
         "group relative w-[220px] rounded-lg border-2 bg-card shadow-sm transition-shadow",
         categoryColors[category],
-        selected && "ring-2 ring-primary shadow-md"
+        selected && !executionStatus && "ring-2 ring-primary shadow-md",
+        executionStatus && executionStatusClasses[executionStatus]
       )}
     >
+      {executionStatus && (
+        <div className="absolute -top-1 -right-1 z-10">
+          {executionStatus === "running" && (
+            <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse" />
+          )}
+          {executionStatus === "completed" && (
+            <div className="h-3 w-3 rounded-full bg-green-500 flex items-center justify-center">
+              <svg className="h-2 w-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
+          {executionStatus === "failed" && (
+            <div className="h-3 w-3 rounded-full bg-red-500 flex items-center justify-center">
+              <svg className="h-2 w-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+          )}
+          {executionStatus === "waiting_approval" && (
+            <div className="h-3 w-3 rounded-full bg-yellow-500 animate-pulse" />
+          )}
+        </div>
+      )}
       {showInput && (
         <Handle
           type="target"

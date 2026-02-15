@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { BaseNode } from "./base-node";
 import type { AgentNode, TriggerNodeData, TriggerSubtype } from "@/types/builder";
 
-const subtypeIcons: Record<TriggerSubtype, typeof Globe> = {
+const subtypeIcons: Record<string, typeof Globe> = {
   webhook: Globe,
   schedule: Clock,
   manual: Play,
 };
 
-const subtypeLabels: Record<TriggerSubtype, string> = {
+const subtypeLabels: Record<string, string> = {
   webhook: "Webhook",
   schedule: "Schedule",
   manual: "Manual",
@@ -21,7 +21,7 @@ const subtypeLabels: Record<TriggerSubtype, string> = {
 
 function TriggerNodeComponent(props: NodeProps<AgentNode>) {
   const data = props.data as TriggerNodeData;
-  const Icon = subtypeIcons[data.subtype];
+  const Icon = subtypeIcons[data.subtype] || Globe;
 
   return (
     <BaseNode
@@ -32,7 +32,7 @@ function TriggerNodeComponent(props: NodeProps<AgentNode>) {
       showInput={false}
     >
       <Badge variant="secondary" className="text-[10px]">
-        {subtypeLabels[data.subtype]}
+        {subtypeLabels[data.subtype] || data.subtype}
       </Badge>
     </BaseNode>
   );

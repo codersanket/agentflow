@@ -19,6 +19,7 @@ from engine.handlers.human_handler import HumanApprovalRequiredError
 from engine.providers.router import ProviderRouter
 from models.agent import AgentEdge, AgentNode, AgentVersion
 from models.execution import Execution
+from models.organization import Organization
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +64,10 @@ def _topological_sort(nodes: list[AgentNode], edges: list[AgentEdge]) -> list[Ag
 class Orchestrator:
     """Builds and executes agent graphs.
 
-    Implements a simple topological-sort executor that processes nodes
-    in dependency order. LangGraph integration can be added later.
+    Implements a topological-sort executor that processes nodes
+    in dependency order with support for conditional branching.
+    Logic nodes (if/else, switch) output a branch key, and only
+    edges whose label matches the branch are followed.
     """
 
     def __init__(self, db: AsyncSession) -> None:
@@ -102,8 +105,24 @@ class Orchestrator:
         # Sort nodes topologically
         sorted_nodes = _topological_sort(nodes, edges)
 
-        # Build provider router from settings/env
-        provider_router = self._build_provider_router()
+        # Build lookup maps for branching
+        node_map = {n.id: n for n in nodes}
+        incoming_edges: dict[UUID, list[AgentEdge]] = defaultdict(list)
+        for edge in edges:
+            incoming_edges[edge.target_node_id].append(edge)
+
+        # Load org settings for AI provider keys
+        org_result = await self._db.execute(
+            select(Organization).where(Organization.id == execution.org_id)
+        )
+        org = org_result.scalar_one_or_none()
+        org_settings = org.settings if org else {}
+
+        # Load integration credentials into context
+        integrations_ctx = await self._load_integrations(execution.org_id)
+
+        # Build provider router from org settings / env
+        provider_router = self._build_provider_router(org_settings=org_settings)
         cost_tracker = CostTracker()
 
         # Build retry policy from agent settings
@@ -120,15 +139,40 @@ class Orchestrator:
             retry_policy=retry_policy,
         )
 
-        # Initialize context with trigger data
+        # Initialize context with trigger data and integrations
         context: dict[str, Any] = {
             "trigger": {"data": execution.trigger_data},
             "execution_id": str(execution_id),
+            "integrations": integrations_ctx,
         }
 
-        # Execute nodes in topological order
+        # Track skipped nodes for conditional branching
+        skipped_nodes: set[UUID] = set()
+
+        # Execute nodes in topological order with branching support
         try:
             for step_order, node in enumerate(sorted_nodes):
+                # --- Branching logic ---
+                node_incoming = incoming_edges.get(node.id, [])
+
+                if node_incoming:
+                    should_skip = self._should_skip_node(
+                        node, node_incoming, node_map, skipped_nodes, context
+                    )
+                    if should_skip:
+                        skipped_nodes.add(node.id)
+                        logger.info(
+                            "Skipping node %s (%s) — branch condition not met",
+                            node.label or node.id,
+                            node.node_type,
+                        )
+                        await self._emit_event(
+                            execution_id,
+                            "step.skipped",
+                            {"node_id": str(node.id), "reason": "branch_condition"},
+                        )
+                        continue
+
                 output = await step_executor.execute_node(
                     node_id=node.id,
                     node_type=node.node_type,
@@ -193,6 +237,52 @@ class Orchestrator:
             # Clean up provider HTTP clients
             await provider_router.close()
 
+    def _should_skip_node(
+        self,
+        node: AgentNode,
+        incoming: list[AgentEdge],
+        node_map: dict[UUID, AgentNode],
+        skipped_nodes: set[UUID],
+        context: dict[str, Any],
+    ) -> bool:
+        """Determine whether a node should be skipped based on branch conditions.
+
+        A node executes if at least one incoming edge is "active":
+        - An edge from a non-skipped, non-logic source with no label → active
+        - An edge from a logic node where edge.label matches the branch output → active
+        - An edge from a skipped source → inactive
+        - An edge from a logic node where edge.label doesn't match → inactive
+        """
+        has_active_edge = False
+
+        for edge in incoming:
+            source_id = edge.source_node_id
+
+            # Edges from skipped nodes are inactive
+            if source_id in skipped_nodes:
+                continue
+
+            source_node = node_map.get(source_id)
+            if not source_node:
+                continue
+
+            # Check if this is a conditional edge from a logic node
+            if source_node.node_type == "logic" and edge.label:
+                source_key = source_node.label or str(source_node.id)
+                logic_output = context.get(source_key, {}).get("output", {})
+                branch = logic_output.get("branch")
+
+                if branch is not None and edge.label == branch:
+                    has_active_edge = True
+                    break
+                # Conditional edge that doesn't match — don't count as active
+            else:
+                # Unconditional edge from a non-skipped node → active
+                has_active_edge = True
+                break
+
+        return not has_active_edge
+
     async def _load_agent_version(self, execution: Execution) -> AgentVersion:
         """Load the agent version for this execution."""
         if execution.agent_version_id:
@@ -218,32 +308,82 @@ class Orchestrator:
             raise ValueError(f"No published version found for agent {execution.agent_id}")
         return version
 
-    def _build_provider_router(self) -> ProviderRouter:
-        """Build a ProviderRouter from environment configuration."""
+    async def _load_integrations(self, org_id: UUID) -> dict[str, dict]:
+        """Load integration credentials for the org, keyed by provider name.
+
+        Returns a dict like {"slack": {"bot_token": "xoxb-..."}, ...}.
+        """
+        from models.integration import Integration
+
+        result = await self._db.execute(
+            select(Integration).where(
+                Integration.org_id == org_id,
+                Integration.status == "connected",
+            )
+        )
+        integrations = result.scalars().all()
+
+        creds_map: dict[str, dict] = {}
+        for integration in integrations:
+            try:
+                # credentials_encrypted is currently stored as JSON text
+                import json as _json
+
+                creds = _json.loads(integration.credentials_encrypted)
+            except (ValueError, TypeError):
+                creds = {}
+            creds_map[integration.provider] = creds
+
+        return creds_map
+
+    def _build_provider_router(self, org_settings: dict | None = None) -> ProviderRouter:
+        """Build a ProviderRouter from org settings with env-var fallback.
+
+        Org-level AI provider keys (stored in org.settings["ai_providers"])
+        take precedence over environment variables.
+        """
         from engine.providers.anthropic import AnthropicProvider
         from engine.providers.google import GoogleProvider
         from engine.providers.ollama import OllamaProvider
         from engine.providers.openai import OpenAIProvider
 
+        ai_providers = (org_settings or {}).get("ai_providers", {})
+
         providers: dict = {}
         fallback_order: list[str] = []
 
-        openai_key = getattr(settings, "OPENAI_API_KEY", None)
+        # OpenAI: org settings first, then env var
+        openai_key = (
+            ai_providers.get("openai", {}).get("api_key")
+            or getattr(settings, "OPENAI_API_KEY", None)
+        )
         if openai_key:
             providers["openai"] = OpenAIProvider(api_key=openai_key)
             fallback_order.append("openai")
 
-        anthropic_key = getattr(settings, "ANTHROPIC_API_KEY", None)
+        # Anthropic: org settings first, then env var
+        anthropic_key = (
+            ai_providers.get("anthropic", {}).get("api_key")
+            or getattr(settings, "ANTHROPIC_API_KEY", None)
+        )
         if anthropic_key:
             providers["anthropic"] = AnthropicProvider(api_key=anthropic_key)
             fallback_order.append("anthropic")
 
-        google_key = getattr(settings, "GOOGLE_API_KEY", None)
+        # Google: org settings first, then env var
+        google_key = (
+            ai_providers.get("google", {}).get("api_key")
+            or getattr(settings, "GOOGLE_API_KEY", None)
+        )
         if google_key:
             providers["google"] = GoogleProvider(api_key=google_key)
             fallback_order.append("google")
 
-        ollama_url = getattr(settings, "OLLAMA_URL", None)
+        # Ollama: org settings first, then env var
+        ollama_url = (
+            ai_providers.get("ollama", {}).get("base_url")
+            or getattr(settings, "OLLAMA_URL", None)
+        )
         if ollama_url:
             providers["ollama"] = OllamaProvider(base_url=ollama_url)
             fallback_order.append("ollama")

@@ -43,7 +43,12 @@ export function IntegrationCard({
             <Icon className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-base">{provider.name}</CardTitle>
+            <CardTitle className="text-base">
+              {isConnected && connected.name ? connected.name : provider.name}
+            </CardTitle>
+            {isConnected && connected.name && (
+              <p className="text-xs text-muted-foreground">{provider.name}</p>
+            )}
           </div>
           <Badge variant={isConnected ? "default" : "outline"}>
             {isConnected ? "Connected" : "Available"}

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth-store";
 import { MobileSidebar } from "./mobile-sidebar";
+import { ThemeToggle } from "./theme-toggle";
 
 interface TopbarProps {
   title?: string;
@@ -25,8 +26,8 @@ export function Topbar({ title }: TopbarProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
-  const initials = user?.full_name
-    ? user.full_name
+  const initials = user?.name
+    ? user.name
         .split(" ")
         .map((n) => n[0])
         .join("")
@@ -60,6 +61,8 @@ export function Topbar({ title }: TopbarProps) {
           />
         </div>
       </div>
+
+      <ThemeToggle />
 
       <Button variant="ghost" size="icon" disabled>
         <Bell className="h-5 w-5" />

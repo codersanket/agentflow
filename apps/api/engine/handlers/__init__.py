@@ -5,9 +5,11 @@ from engine.handlers.ai_handler import AINodeHandler
 from engine.handlers.base import NodeHandler, NodeOutput
 from engine.handlers.human_handler import HumanApprovalRequiredError, HumanNodeHandler
 from engine.handlers.logic_handler import LogicNodeHandler
+from engine.handlers.trigger_handler import TriggerNodeHandler
 
 # Registry mapping node_type -> handler class
 NODE_HANDLER_REGISTRY: dict[str, type[NodeHandler]] = {
+    "trigger": TriggerNodeHandler,
     "ai": AINodeHandler,
     "action": ActionNodeHandler,
     "logic": LogicNodeHandler,
@@ -32,5 +34,6 @@ __all__ = [
     "NODE_HANDLER_REGISTRY",
     "NodeHandler",
     "NodeOutput",
+    "TriggerNodeHandler",
     "get_handler",
 ]

@@ -64,3 +64,28 @@ class ApiKeyCreatedResponse(BaseModel):
     key: str
     key_prefix: str
     scopes: list[str]
+
+
+# --- AI Provider Key Management ---
+
+
+class AIProviderConfig(BaseModel):
+    provider: str  # "openai", "anthropic", "google", "ollama"
+    api_key: str | None = None  # masked on read
+    base_url: str | None = None  # for ollama/custom endpoints
+    is_configured: bool = False
+
+
+class AIProviderSetRequest(BaseModel):
+    api_key: str | None = None
+    base_url: str | None = None
+
+
+class AIProviderTestResponse(BaseModel):
+    success: bool
+    message: str
+    model_used: str | None = None
+
+
+class AIProvidersListResponse(BaseModel):
+    providers: list[AIProviderConfig]

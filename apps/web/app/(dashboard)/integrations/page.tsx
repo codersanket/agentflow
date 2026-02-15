@@ -40,6 +40,17 @@ export default function IntegrationsPage() {
     fetchData();
   }, [fetchData]);
 
+  // Listen for OAuth popup success messages
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "oauth_success") {
+        fetchData();
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [fetchData]);
+
   const handleConnect = async (
     provider: string,
     credentials: Record<string, string>,
@@ -57,13 +68,37 @@ export default function IntegrationsPage() {
     setConnected((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const openConnect = (provider: string) => {
-    setConnectProvider(provider);
-    setDialogOpen(true);
+  const openConnect = async (provider: string) => {
+    // Find the provider info to check auth_method
+    const providerInfo = available.find((p) => p.provider === provider);
+
+    if (providerInfo?.auth_method === "oauth") {
+      // OAuth flow: get the URL and open in a popup
+      try {
+        const { url } = await api.integrations.oauthStart(provider);
+        const w = 600;
+        const h = 700;
+        const left = window.screenX + (window.outerWidth - w) / 2;
+        const top = window.screenY + (window.outerHeight - h) / 2;
+        window.open(
+          url,
+          `${provider}_oauth`,
+          `width=${w},height=${h},left=${left},top=${top},popup=yes`
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : `Failed to start ${provider} OAuth`
+        );
+      }
+    } else {
+      // Credentials flow: open the dialog
+      setConnectProvider(provider);
+      setDialogOpen(true);
+    }
   };
 
-  const connectedByProvider = new Map(
-    connected.map((c) => [c.provider, c])
+  const providerMap = new Map(
+    available.map((p) => [p.provider, p])
   );
 
   return (
@@ -102,17 +137,19 @@ export default function IntegrationsPage() {
                 Connected ({connected.length})
               </h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {available
-                  .filter((p) => connectedByProvider.has(p.provider))
-                  .map((provider) => (
+                {connected.map((conn) => {
+                  const provider = providerMap.get(conn.provider);
+                  if (!provider) return null;
+                  return (
                     <IntegrationCard
-                      key={provider.provider}
+                      key={conn.id}
                       provider={provider}
-                      connected={connectedByProvider.get(provider.provider)}
+                      connected={conn}
                       onConnect={openConnect}
                       onDisconnect={handleDisconnect}
                     />
-                  ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -122,16 +159,14 @@ export default function IntegrationsPage() {
               Available Integrations
             </h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {available
-                .filter((p) => !connectedByProvider.has(p.provider))
-                .map((provider) => (
-                  <IntegrationCard
-                    key={provider.provider}
-                    provider={provider}
-                    onConnect={openConnect}
-                    onDisconnect={handleDisconnect}
-                  />
-                ))}
+              {available.map((provider) => (
+                <IntegrationCard
+                  key={provider.provider}
+                  provider={provider}
+                  onConnect={openConnect}
+                  onDisconnect={handleDisconnect}
+                />
+              ))}
             </div>
           </div>
         </>

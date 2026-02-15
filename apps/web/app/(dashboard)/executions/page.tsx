@@ -210,7 +210,7 @@ export default function ExecutionsPage() {
                     </TableCell>
                     <TableCell className="text-sm">{exec.total_tokens}</TableCell>
                     <TableCell className="text-sm">
-                      ${exec.total_cost.toFixed(4)}
+                      ${Number(exec.total_cost).toFixed(4)}
                     </TableCell>
                   </TableRow>
                   {expandedId === exec.id && (

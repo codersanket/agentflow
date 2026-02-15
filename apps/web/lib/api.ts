@@ -209,6 +209,24 @@ export interface UserResponse {
   role: string;
 }
 
+export interface AgentNodeSchema {
+  id: string;
+  node_type: string;
+  node_subtype: string;
+  label?: string;
+  config: Record<string, unknown>;
+  position_x: number;
+  position_y: number;
+}
+
+export interface AgentEdgeSchema {
+  id: string;
+  source_node_id: string;
+  target_node_id: string;
+  condition?: Record<string, unknown> | null;
+  label?: string;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -220,6 +238,18 @@ export interface Agent {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  latest_version?: {
+    id: string;
+    agent_id: string;
+    version: number;
+    definition: Record<string, unknown>;
+    change_message?: string;
+    created_by?: string;
+    is_published: boolean;
+    created_at: string;
+    nodes: AgentNodeSchema[];
+    edges: AgentEdgeSchema[];
+  } | null;
 }
 
 export interface AgentVersion {
@@ -348,6 +378,19 @@ export interface CostBreakdownItem {
   total_cost: number;
 }
 
+export interface AIProviderConfig {
+  provider: string;
+  api_key: string | null;
+  base_url: string | null;
+  is_configured: boolean;
+}
+
+export interface AIProviderTestResult {
+  success: boolean;
+  message: string;
+  model_used: string | null;
+}
+
 export interface Integration {
   id: string;
   org_id: string;
@@ -364,6 +407,7 @@ export interface AvailableIntegration {
   provider: string;
   name: string;
   description: string;
+  auth_method: "oauth" | "credentials";
   actions: {
     name: string;
     description: string;
@@ -492,6 +536,8 @@ export const api = {
       post<Integration>(`/integrations/${provider}/connect`, data),
     disconnect: (id: string) => del<void>(`/integrations/${id}`),
     available: () => get<AvailableIntegration[]>("/integrations/available"),
+    oauthStart: (provider: string) =>
+      get<{ url: string }>(`/integrations/${provider}/oauth/start`),
   },
   analytics: {
     overview: () => get<AnalyticsOverview>("/analytics/overview"),
@@ -520,5 +566,16 @@ export const api = {
         query,
         top_k: topK ?? 5,
       }),
+  },
+  org: {
+    get: () => get<{ id: string; name: string; slug: string; plan: string; settings: Record<string, unknown>; created_at: string }>("/org"),
+    aiProviders: {
+      list: () => get<{ providers: AIProviderConfig[] }>("/org/ai-providers"),
+      set: (provider: string, data: { api_key?: string; base_url?: string }) =>
+        put<AIProviderConfig>(`/org/ai-providers/${provider}`, data),
+      remove: (provider: string) => del<void>(`/org/ai-providers/${provider}`),
+      test: (provider: string, data?: { api_key?: string; base_url?: string }) =>
+        post<AIProviderTestResult>(`/org/ai-providers/${provider}/test`, data),
+    },
   },
 };

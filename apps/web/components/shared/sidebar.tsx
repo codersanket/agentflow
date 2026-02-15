@@ -29,8 +29,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
 
-  const initials = user?.full_name
-    ? user.full_name
+  const initials = user?.name
+    ? user.name
         .split(" ")
         .map((n) => n[0])
         .join("")

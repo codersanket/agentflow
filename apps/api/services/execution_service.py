@@ -93,15 +93,20 @@ async def trigger_execution(
     db.add(execution)
     await db.flush()
 
-    # Dispatch Celery task (non-blocking)
-    # Import here to avoid circular imports; in production this dispatches to Celery
-    try:
-        from workers.agent_worker import execute_agent
+    # Dispatch to Celery or run inline
+    from core.config import settings as app_settings
 
-        execute_agent.delay(str(execution.id), dry_run=dry_run)
-    except ImportError:
-        # Celery worker not available — execution stays pending
-        pass
+    if app_settings.CELERY_ENABLED:
+        try:
+            from workers.agent_worker import execute_agent
+
+            execute_agent.delay(str(execution.id))
+        except Exception:
+            # Celery dispatch failed — run inline as fallback
+            await _run_inline(db, execution)
+    else:
+        # Celery disabled — run inline
+        await _run_inline(db, execution)
 
     return _execution_to_response(execution)
 
@@ -365,6 +370,22 @@ async def _get_execution_or_404(
         )
 
     return execution
+
+
+async def _run_inline(db: AsyncSession, execution: Execution) -> None:
+    """Execute the agent inline (without Celery)."""
+    try:
+        from engine.orchestrator import Orchestrator
+
+        orchestrator = Orchestrator(db)
+        await orchestrator.run(execution.id)
+    except Exception as exc:
+        # If orchestrator didn't already mark as failed, do it here
+        if execution.status not in ("failed", "completed"):
+            execution.status = "failed"
+            execution.error_message = str(exc)
+            execution.completed_at = datetime.now(UTC)
+            await db.flush()
 
 
 def _execution_to_response(execution: Execution) -> ExecutionResponse:

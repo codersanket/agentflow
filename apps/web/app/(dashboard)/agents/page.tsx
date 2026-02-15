@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bot,
   Plus,
@@ -20,9 +21,11 @@ import {
 } from "@/components/ui/select";
 import { AgentCard } from "@/components/agents/agent-card";
 import { CreateAgentDialog } from "@/components/agents/create-agent-dialog";
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { api, type Agent } from "@/lib/api";
 
 export default function AgentsPage() {
+  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,26 @@ export default function AgentsPage() {
   const [cursor, setCursor] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && agents.length === 0 && !error) {
+      const dismissed = localStorage.getItem("agentflow_onboarding_dismissed");
+      if (!dismissed) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [isLoading, agents.length, error]);
+
+  const handleOnboardingComplete = (agentId: string) => {
+    localStorage.setItem("agentflow_onboarding_dismissed", "true");
+    router.push(`/agents/${agentId}`);
+  };
+
+  const handleOnboardingSkip = () => {
+    localStorage.setItem("agentflow_onboarding_dismissed", "true");
+    setShowOnboarding(false);
+  };
 
   const fetchAgents = useCallback(async (loadMore = false) => {
     if (loadMore) {
@@ -99,6 +122,17 @@ export default function AgentsPage() {
       // silently fail for now
     }
   };
+
+  if (showOnboarding) {
+    return (
+      <div className="relative">
+        <OnboardingWizard
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingSkip}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
