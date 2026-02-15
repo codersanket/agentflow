@@ -278,7 +278,7 @@ async def rollback_to_version(
     version_id: UUID,
     user_id: UUID,
 ) -> AgentResponse:
-    """Roll back an agent to a previous version by creating a new version with the old version's definition."""
+    """Roll back an agent to a previous version by creating a new version."""
     agent = await _get_agent_or_404(db, org_id, agent_id)
 
     if agent.status == "archived":
