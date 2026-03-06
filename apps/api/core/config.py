@@ -17,7 +17,12 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # JWT
+    # Rate Limiting
+RATE_LIMIT_ENABLED: bool = True
+RATE_LIMIT_AUTH_RPM: int = 10
+RATE_LIMIT_API_RPM: int = 60
+
+# JWT
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15

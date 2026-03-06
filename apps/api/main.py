@@ -8,6 +8,7 @@ from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
+from apps.api.core.rate_limiter import RateLimiterMiddleware
 from core.database import engine
 from core.redis import close_redis
 from routers.agents import router as agents_router
